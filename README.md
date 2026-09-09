@@ -95,6 +95,7 @@ Set on the inserted `remote-workspace` row in the profile's `cordis.yml` (defaul
 ```sh
 pnpm install
 pnpm run typecheck   # host face + client face
+pnpm run test        # behavior tests for the pure workspace-identity helpers
 pnpm run build       # tsc (host face, client declarations) + esbuild browser bundle
 ```
 
@@ -105,6 +106,7 @@ Layout:
 ```
 src/                 host face: owner, fs router, subprocess router, controller, wire types
 src/client/          browser half: slot entry, panel component, store, dictionaries
+tests/               behavior tests, run against the built lib/
 cordis.patch.yml     the profile layer this package contributes
 scripts/build.mjs    tsc + esbuild closure-factory bundle for the browser half
 ```

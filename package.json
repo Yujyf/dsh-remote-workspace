@@ -57,6 +57,7 @@
   },
   "scripts": {
     "build": "node scripts/build.mjs",
+    "test": "node --test tests/",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.client.json"
   },
   "dependencies": {

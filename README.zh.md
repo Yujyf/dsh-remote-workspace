@@ -95,6 +95,7 @@ dsh plugin --profile web remove @yujyf/dsh-remote-workspace
 ```sh
 pnpm install
 pnpm run typecheck   # host 面 + client 面
+pnpm run test        # 纯工作区标识辅助函数的行为测试
 pnpm run build       # tsc（host 面、client 声明）+ esbuild 浏览器包
 ```
 
@@ -105,6 +106,7 @@ pnpm run build       # tsc（host 面、client 声明）+ esbuild 浏览器包
 ```
 src/                 host 面：所有者、fs 路由器、subprocess 路由器、controller、线协议类型
 src/client/          浏览器侧：插槽入口、面板组件、store、词典
+tests/               针对构建产物 lib/ 运行的行为测试
 cordis.patch.yml     本包贡献的 profile 层
 scripts/build.mjs    tsc + esbuild 的闭包工厂浏览器包
 ```
