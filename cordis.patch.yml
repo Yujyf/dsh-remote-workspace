@@ -1,0 +1,37 @@
+# The remote-workspace layer: Local/WSL execution-world routing plus the
+# sidebar selector.
+#
+# A patch's `name` asserts the target row's identity — it cannot replace a
+# row's plugin. Routing therefore DISABLES the shipped single-world backends
+# and inserts the routers under their own ids, so exactly one provider serves
+# `ctx.fs` / `ctx.subprocess` in the composed tree.
+#
+# `autoStart` starts a stopped WSL distribution when one of its workspaces
+# connects; `shutdownOnDisconnect` stays false so disconnecting never terminates
+# a distribution out from under another session.
+
+- id: subprocess
+  disabled: true
+
+- id: fs-sandbox
+  disabled: true
+
+- insert:
+    - id: subprocess-remote-workspace
+      name: '@yujyf/dsh-remote-workspace/subprocess'
+
+    - id: fs-remote-workspace
+      name: '@yujyf/dsh-remote-workspace/fs'
+
+    - id: remote-workspace
+      name: '@yujyf/dsh-remote-workspace'
+      config:
+        autoStart: true
+        shutdownOnDisconnect: false
+        commandTimeoutMs: 30000
+
+    - id: remote-workspace-controller
+      name: '@yujyf/dsh-remote-workspace/controller'
+
+    - id: ui-remote-workspace
+      name: '@yujyf/dsh-remote-workspace/ui'

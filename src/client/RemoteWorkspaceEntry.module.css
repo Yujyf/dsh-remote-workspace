@@ -1,0 +1,226 @@
+/* Remote-workspace selector: sidebar entry + panel. Tokens only (docs/web-styling.md). */
+
+.entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.entryRail {
+  justify-content: center;
+  width: 32px;
+  padding: 0;
+}
+
+.modal {
+  width: 720px;
+  max-width: calc(100vw - 32px);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: min(560px, calc(100vh - 220px));
+  overflow: auto;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.session {
+  flex: 1;
+  color: var(--dsw-alias-text-secondary);
+  font-size: 13px;
+}
+
+.busy {
+  color: var(--dsw-alias-text-secondary);
+  font-size: 12px;
+}
+
+.error {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--dsw-alias-fill-danger-subtle);
+  color: var(--dsw-alias-text-danger);
+  font-size: 13px;
+}
+
+.hint {
+  margin: 4px 0;
+  color: var(--dsw-alias-text-secondary);
+  font-size: 13px;
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.target {
+  display: flex;
+  flex-direction: column;
+}
+
+.targetRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.targetRow:hover {
+  background: var(--dsw-alias-fill-hover);
+}
+
+.chevron {
+  color: var(--dsw-alias-icon-secondary);
+  transition: transform 120ms ease;
+}
+
+.chevronOpen {
+  transform: rotate(90deg);
+}
+
+.targetIcon {
+  color: var(--dsw-alias-icon-secondary);
+}
+
+.targetName {
+  flex: 1;
+  font-weight: 500;
+}
+
+.statusText {
+  color: var(--dsw-alias-text-secondary);
+  font-size: 12px;
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 8px 8px 28px;
+}
+
+.workspaceRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.folderIcon {
+  color: var(--dsw-alias-icon-secondary);
+  flex: none;
+}
+
+.workspaceText {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.workspaceTitle {
+  font-size: 13px;
+}
+
+.workspacePath {
+  color: var(--dsw-alias-text-secondary);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bound {
+  color: var(--dsw-alias-text-success);
+  font-size: 12px;
+  flex: none;
+}
+
+.browse {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.browseHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.crumb {
+  flex: 1;
+  font-family: var(--dsw-font-mono);
+  font-size: 12px;
+  color: var(--dsw-alias-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dirRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dirRow:hover {
+  background: var(--dsw-alias-fill-hover);
+}
+
+.browseFoot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 4px;
+  border-top: 0.5px solid var(--dsw-alias-border-subtle);
+}
+
+.folderForm {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+
+.folderInput {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 8px;
+  border: 0.5px solid var(--dsw-alias-border-subtle);
+  border-radius: 6px;
+  background: var(--dsw-alias-fill-input);
+  color: inherit;
+  font: inherit;
+}

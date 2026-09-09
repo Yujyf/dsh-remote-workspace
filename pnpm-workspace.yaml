@@ -1,0 +1,15 @@
+# pnpm 11 keeps these settings here, not in package.json.
+#
+# `minimumReleaseAge: 0` — the newest DSH release line is published days before
+# development starts; the supply-chain age policy guards consumer installs, not
+# this build.
+#
+# Only esbuild must run its installer (it downloads the platform binary). The
+# other scripts belong to DSH packages this project consumes as peers and never
+# executes at build time, so they stay denied.
+minimumReleaseAge: 0
+allowBuilds:
+  '@deepseek-ai/dsh-subprocess-local': false
+  esbuild: true
+  koffi: false
+  node-pty: false
