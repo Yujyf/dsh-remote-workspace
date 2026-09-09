@@ -20,7 +20,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
         'remote-workspace': RemoteWorkspaceKey;
     }
 }
-/** Required services: the slot registry, locale, sessions, and the Remote namespace. */
+/** Required services: the slot registry, locale, and the Session object layer. */
 export declare const inject: string[];
 /**
  * Register the dictionaries and the sidebar entry. The target slot is declared

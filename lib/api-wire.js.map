@@ -1,0 +1,1 @@
+{"version":3,"file":"api-wire.js","sourceRoot":"","sources":["../src/api-wire.ts"],"names":[],"mappings":"AAAA;;;;;;;;;;GAUG;AAEH,mEAAmE;AACnE,MAAM,CAAC,MAAM,2BAA2B,GAAG,uBAAuB,CAAA;AAElE,6EAA6E;AAC7E,MAAM,CAAC,MAAM,sBAAsB,GAAG;IACpC,aAAa;IACb,gBAAgB;IAChB,iBAAiB;IACjB,iBAAiB;IACjB,kBAAkB;IAClB,qBAAqB;IACrB,aAAa;IACb,eAAe;IACf,YAAY;IACZ,iBAAiB;IACjB,aAAa;CACL,CAAA"}

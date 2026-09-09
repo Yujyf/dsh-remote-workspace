@@ -1,15 +1,15 @@
 /**
  * React-free Client remote-workspace state: the discovered target catalog, the
- * durable workspace rows, and the commands that mutate them. Remote calls
- * answer `RemoteResult`, so this model owns unwrapping: a failure throws
+ * durable workspace rows, and the commands that mutate them. API calls answer
+ * an envelope, so this model owns unwrapping: a failure throws
  * {@link RemoteWorkspaceCommandError} carrying the Host business code, while a
  * snapshot load records the failure in state instead of rejecting.
  * @module @Yujyf/dsh-remote-workspace/client/model
  */
 
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import type { RemoteFailure } from '@deepseek-ai/dsh-typert-protocol'
-import type { RemoteWorkspaceNamespace } from './namespace.ts'
+import type { RemoteWorkspaceApiFailure } from '../api-wire.ts'
+import type { IRemoteWorkspaceApi } from './api.ts'
 import type {
   RemoteDirectoryListing,
   RemoteWorkspace,
@@ -54,9 +54,9 @@ export class RemoteWorkspaceCommandError extends Error {
 
   /**
    * @param operation - the verb that failed.
-   * @param rpcError - Host business or folded carrier failure.
+   * @param rpcError - Host business or transport failure.
    */
-  constructor(readonly operation: string, readonly rpcError: RemoteFailure) {
+  constructor(readonly operation: string, readonly rpcError: RemoteWorkspaceApiFailure) {
     super(`remote workspace ${operation} failed: ${rpcError.code}: ${rpcError.message}`)
   }
 }
@@ -74,8 +74,8 @@ export class ClientRemoteWorkspaceModel implements RemoteWorkspaceSource {
   private cache: RemoteWorkspaceSnapshot = EMPTY
   private inflight: Promise<void> | undefined
 
-  /** @param remote - the generated remote-workspace Remote namespace. */
-  constructor(private readonly remote: RemoteWorkspaceNamespace) {}
+  /** @param remote - the remote-workspace HTTP API client. */
+  constructor(private readonly remote: IRemoteWorkspaceApi) {}
 
   /**
    * Read the current snapshot.
@@ -237,6 +237,6 @@ export class ClientRemoteWorkspaceModel implements RemoteWorkspaceSource {
   }
 }
 
-function failureText(failure: RemoteFailure): string {
+function failureText(failure: RemoteWorkspaceApiFailure): string {
   return failure.message
 }

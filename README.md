@@ -17,7 +17,7 @@ One sidebar entry registers the selector: pick a target, browse to a folder, reg
 
 | | |
 |---|---|
-| DSH | `>=0.1.0 <0.2` |
+| DSH | `>=0.1.0 <0.2`; verified on `0.1.2-rc.1` (the version the desktop app ships) and built against the `0.1.5-alpha.2` type surface |
 | Node | `^22.19 \|\| >=24` |
 | OS | Windows 10/11 for WSL targets; the Local target also works on macOS and Linux |
 | WSL | `wsl.exe` on `PATH`, with at least one registered distribution |
@@ -58,10 +58,12 @@ Five Cordis plugins, one capability seam each:
 | `.` | `ctx.remoteWorkspace` | Owner: targets, workspace registrations, connect/disconnect, session binding, health, directory listing, canonical URI resolution |
 | `./fs` | `ctx.fs` | Filesystem router: local binding → isolated sandboxed backend; WSL binding → helper-backed `WslFileSystem` |
 | `./subprocess` | `ctx.subprocess` | Process router: local binding → isolated local backend; WSL binding → `wsl.exe` argv translation |
-| `./controller` | Remote verbs | Browser-facing RPC over the owner's API |
+| `./controller` | `ctx.webServer` route | JSON API the browser half calls: `POST /remote-workspace/api/<verb>` |
 | `./ui` + `./client` | sidebar slot | Selector entry, panel, folder browser |
 
 `cordis.patch.yml` disables the shipped `subprocess` and `fs-sandbox` rows and inserts these five, so exactly one provider serves `ctx.fs` and `ctx.subprocess` in the composed tree.
+
+The browser half talks to the Host over a plain JSON route rather than a Remote namespace. DSH mounts Remote namespaces from a fixed list compiled into `@deepseek-ai/dsh-api-remotes`, so a package outside that assembly cannot contribute one; the client fiber would then wait forever for `remote.<namespace>` and the Web shell would never finish booting. The route applies the same browser-trust fence as the `/api` gateway: the request's Host authority must be loopback, or an authority the deployment declares in `webRuntime.trustedHosts`.
 
 Design constraints this package holds to:
 

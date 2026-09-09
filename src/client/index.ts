@@ -6,9 +6,7 @@
  * inject `hooks` compartment so the component reads it with a framework hook.
  */
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
-// Type-only: pulls the Gateway's ClientRemote face (ctx.remote) and the Session
-// object layer's Context merge (ctx.sessions).
-import type {} from '@deepseek-ai/dsh-api-gateway/client'
+// Type-only: pulls the Session object layer's Context merge (ctx.sessions).
 import type {} from '@deepseek-ai/dsh-api-session-controller/client'
 // Type-only: pulls the locale plugin's Context merge (ctx.locale).
 import type {} from '@deepseek-ai/dsh-client-locale/client'
@@ -17,10 +15,10 @@ import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 // Type-only: pulls the owner slot contract for 'sidebar.footer.action'.
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
 import type { HostObservable } from '@deepseek-ai/dsh-client-ui-slots'
+import { RemoteWorkspaceApi } from './api.ts'
 import type { RemoteWorkspaceInjected } from './contract.ts'
 import type { RemoteWorkspaceSnapshot } from './model.ts'
 import { ClientRemoteWorkspaceModel } from './model.ts'
-import type { RemoteWorkspaceNamespace } from './namespace.ts'
 import { RemoteWorkspacesController } from './service.ts'
 import { RemoteWorkspaceEntry } from './RemoteWorkspaceEntry.tsx'
 import { createRemoteWorkspaceStore } from './store.ts'
@@ -43,8 +41,8 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 /** Dictionary namespace owned by this plugin. */
 const NS = 'remote-workspace'
 
-/** Required services: the slot registry, locale, sessions, and the Remote namespace. */
-export const inject = ['slots', 'locale', 'sessions', 'remote', 'remote.remoteWorkspace']
+/** Required services: the slot registry, locale, and the Session object layer. */
+export const inject = ['slots', 'locale', 'sessions']
 
 /**
  * Register the dictionaries and the sidebar entry. The target slot is declared
@@ -54,10 +52,7 @@ export const inject = ['slots', 'locale', 'sessions', 'remote', 'remote.remoteWo
  * @param ctx - client root context.
  */
 export function apply(ctx: ClientContext): void {
-  // The namespace member's generated type is not reachable from a package that
-  // is not the Remote assembly; the narrow interface declares the verbs used.
-  const namespace = (ctx.remote as unknown as { remoteWorkspace: RemoteWorkspaceNamespace }).remoteWorkspace
-  const model = new ClientRemoteWorkspaceModel(namespace)
+  const model = new ClientRemoteWorkspaceModel(new RemoteWorkspaceApi())
   const catalog = new RemoteWorkspacesController(ctx, model)
   void model.refresh()
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'remote-workspace: dictionaries')

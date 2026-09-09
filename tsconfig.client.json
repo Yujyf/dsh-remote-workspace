@@ -1,8 +1,5 @@
 {
   "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "emitDeclarationOnly": true
-  },
   "include": ["src/client", "src/css-modules.d.ts"],
   "exclude": []
 }

@@ -1,24 +1,28 @@
 /**
- * Host remote-workspace Remote owner: target discovery, workspace CRUD, path
- * browsing, and session binding.
+ * Host remote-workspace API route: target discovery, workspace CRUD, path
+ * browsing, and session binding, served as JSON over `ctx.webServer`.
  * @module @Yujyf/dsh-remote-workspace
  */
-import { Context } from '@deepseek-ai/cordis';
-import { TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol';
+import { Context, Service } from '@deepseek-ai/cordis';
 import type { RemoteDirectoryListing, TargetHealth } from './wire-types.ts';
 import type { RemoteWorkspaceBindRequest, RemoteWorkspaceCreateDirectoryRequest, RemoteWorkspaceCreateRequest, RemoteWorkspaceCreateValue, RemoteWorkspaceHealthRequest, RemoteWorkspaceIdRequest, RemoteWorkspaceListDirectoryRequest, RemoteWorkspaceListValue, RemoteWorkspaceResolveUriRequest, RemoteWorkspaceResolveUriValue, RemoteWorkspaceTargetsValue } from './wire-types.ts';
 export type * from './wire-types.ts';
 declare module '@deepseek-ai/cordis' {
     interface Context {
-        /** Host remote-workspace business API and Remote namespace owner. */
+        /** Host remote-workspace business API behind the HTTP route. */
         remoteWorkspaceController: RemoteWorkspaceController;
     }
 }
-/** Host service backing the generated `ctx.remote.remoteWorkspace` namespace. */
-export declare class RemoteWorkspaceController extends TypertRemoteService {
+/** Host service serving the remote-workspace JSON route. */
+export declare class RemoteWorkspaceController extends Service {
     static inject: string[];
     /** @param ctx - Host context containing the remote-workspace owner. */
     constructor(ctx: Context);
+    /**
+     * Register the route. The registration is an effect: disposing the fiber
+     * removes the route.
+     */
+    [Service.init](): void;
     /**
      * List discovered execution targets.
      * @returns the live target catalog.
@@ -75,7 +79,7 @@ export declare class RemoteWorkspaceController extends TypertRemoteService {
     /**
      * Create a child directory on a target.
      * @param request - Target, parent, and name.
-     * @returns the created path as a listing of that directory.
+     * @returns the created path.
      */
     createDirectory(request: RemoteWorkspaceCreateDirectoryRequest): Promise<{
         readonly path: string;
@@ -86,6 +90,16 @@ export declare class RemoteWorkspaceController extends TypertRemoteService {
      * @returns resolution after durability.
      */
     bindSession(request: RemoteWorkspaceBindRequest): Promise<void>;
+    /** Verb table: one entry per browser-callable method. */
+    private verbs;
+    private handle;
+    /**
+     * Whether the request may reach this route: the Host authority is the local
+     * loopback one, or an authority this deployment declares trusted. Mirrors the
+     * browser-trust fence the gateway applies to `/api`.
+     */
+    private trusted;
+    private respond;
 }
 export default RemoteWorkspaceController;
 //# sourceMappingURL=controller.d.ts.map

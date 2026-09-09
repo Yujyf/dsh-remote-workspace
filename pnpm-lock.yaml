@@ -18,12 +18,6 @@ importers:
       '@deepseek-ai/dsh-agent':
         specifier: 0.1.5-alpha.2
         version: 0.1.5-alpha.2(cfc1690176e5c008b05d52ad11161b75)
-      '@deepseek-ai/dsh-api-gateway':
-        specifier: 0.1.5-alpha.2
-        version: 0.1.5-alpha.2(@deepseek-ai/cordis@4.0.2)
-      '@deepseek-ai/dsh-api-remotes':
-        specifier: 0.1.5-alpha.2
-        version: 0.1.5-alpha.2(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-scope@0.1.5-alpha.2(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-invariants@0.1.5-alpha.2(@deepseek-ai/cordis@4.0.2)))
       '@deepseek-ai/dsh-api-session-controller':
         specifier: 0.1.5-alpha.2
         version: 0.1.5-alpha.2(fa8ff6526110b6caf167bdb4cfef79e0)
@@ -81,9 +75,6 @@ importers:
       '@deepseek-ai/dsh-subprocess-local':
         specifier: 0.1.5-alpha.2
         version: 0.1.5-alpha.2(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-subprocess@0.1.5-alpha.2(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-http-proxy@0.1.5-alpha.2(@deepseek-ai/cordis@4.0.2)))(@deepseek-ai/dsh-timeout@0.1.5-alpha.2(@deepseek-ai/cordis@4.0.2))
-      '@deepseek-ai/dsh-typert-protocol':
-        specifier: 0.1.5-alpha.2
-        version: 0.1.5-alpha.2(@deepseek-ai/cordis@4.0.2)
       '@deepseek-ai/schemastery':
         specifier: ^3
         version: 3.18.2
@@ -181,12 +172,6 @@ packages:
     resolution: {integrity: sha512-etRnkJAGxSoWav95+wtrqHk46EqCvNF08WKgCoyCoX8NmuCxtcYfDGSK/cW2UaCziNEDrgoxMg2BPobFt8nt4Q==}
     peerDependencies:
       '@deepseek-ai/cordis': ^4.0.2
-
-  '@deepseek-ai/dsh-api-remotes@0.1.5-alpha.2':
-    resolution: {integrity: sha512-cV8+Dk95q8PWOdORMffzA7/8F/0opw9tDzTYhDOOJXFVduJbaGI74IF+orC2OXLnsKh9O0PTu7DF90f12A8N1w==}
-    peerDependencies:
-      '@deepseek-ai/cordis': ^4.0.2
-      '@deepseek-ai/dsh-scope': ^0.1.5-alpha.2
 
   '@deepseek-ai/dsh-api-session-controller@0.1.5-alpha.2':
     resolution: {integrity: sha512-BErbHNm42BRGLvzev9JG38mLc3chdsyTPbBVF+2HHH+um4idO8uikpg8dGDYfx+2c19As98g6Y/kB5GtDj9/Ng==}
@@ -1037,14 +1022,6 @@ snapshots:
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
-
-  '@deepseek-ai/dsh-api-remotes@0.1.5-alpha.2(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-scope@0.1.5-alpha.2(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-invariants@0.1.5-alpha.2(@deepseek-ai/cordis@4.0.2)))':
-    dependencies:
-      '@deepseek-ai/cordis': 4.0.2(@deepseek-ai/cordis-plugin-include@1.0.7)(@deepseek-ai/cordis-plugin-loader@1.0.3)
-      '@deepseek-ai/dsh-deque': 0.1.5-alpha.2(@deepseek-ai/cordis@4.0.2)
-      '@deepseek-ai/dsh-scope': 0.1.5-alpha.2(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-invariants@0.1.5-alpha.2(@deepseek-ai/cordis@4.0.2))
-      '@deepseek-ai/dsh-session': 0.1.5-alpha.2(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-scope@0.1.5-alpha.2(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-invariants@0.1.5-alpha.2(@deepseek-ai/cordis@4.0.2)))
-      '@deepseek-ai/dsh-util-values': 0.1.5-alpha.2(@deepseek-ai/cordis@4.0.2)
 
   '@deepseek-ai/dsh-api-session-controller@0.1.5-alpha.2(fa8ff6526110b6caf167bdb4cfef79e0)':
     dependencies:

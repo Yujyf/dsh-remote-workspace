@@ -17,7 +17,7 @@ DSH 每个 profile 只提供一个文件系统后端和一个子进程后端。�
 
 | | |
 |---|---|
-| DSH | `>=0.1.0 <0.2` |
+| DSH | `>=0.1.0 <0.2`；已在 `0.1.2-rc.1`（桌面端内置版本）上验证，类型面按 `0.1.5-alpha.2` 构建 |
 | Node | `^22.19 \|\| >=24` |
 | 操作系统 | WSL 目标需要 Windows 10/11；Local 目标在 macOS 与 Linux 上同样可用 |
 | WSL | `wsl.exe` 在 `PATH` 中，且至少注册了一个发行版 |
@@ -58,10 +58,12 @@ dsh plugin --profile web remove @yujyf/dsh-remote-workspace
 | `.` | `ctx.remoteWorkspace` | 所有者：目标、工作区登记、连接/断开、会话绑定、健康检查、目录列举、规范化 URI 解析 |
 | `./fs` | `ctx.fs` | 文件系统路由器：本地绑定 → 隔离的沙箱后端；WSL 绑定 → helper 驱动的 `WslFileSystem` |
 | `./subprocess` | `ctx.subprocess` | 进程路由器：本地绑定 → 隔离的本地后端；WSL 绑定 → `wsl.exe` argv 转换 |
-| `./controller` | Remote 动词 | 浏览器侧 RPC，转发所有者的 API |
+| `./controller` | `ctx.webServer` 路由 | 浏览器侧调用的 JSON API：`POST /remote-workspace/api/<verb>` |
 | `./ui` + `./client` | 侧边栏插槽 | 入口、面板、文件夹浏览器 |
 
 `cordis.patch.yml` 会停用自带的 `subprocess` 与 `fs-sandbox` 两行，并插入这五个插件，保证组合后的树里 `ctx.fs` 与 `ctx.subprocess` 各自只有一个提供者。
+
+浏览器侧通过普通 JSON 路由与宿主通信，而不是 Remote 命名空间：DSH 的 Remote 命名空间来自编译进 `@deepseek-ai/dsh-api-remotes` 的固定清单，不在该装配里的包无法贡献命名空间——客户端 fiber 会一直等待 `remote.<namespace>`，Web 外壳将永远启动不完。该路由套用与 `/api` 网关相同的浏览器信任围栏：请求的 Host authority 必须是回环地址，或部署在 `webRuntime.trustedHosts` 中声明的 authority。
 
 本包坚持的设计约束：
 

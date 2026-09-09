@@ -1,14 +1,14 @@
 /**
  * React-free Client remote-workspace state: the discovered target catalog, the
- * durable workspace rows, and the commands that mutate them. Remote calls
- * answer `RemoteResult`, so this model owns unwrapping: a failure throws
+ * durable workspace rows, and the commands that mutate them. API calls answer
+ * an envelope, so this model owns unwrapping: a failure throws
  * {@link RemoteWorkspaceCommandError} carrying the Host business code, while a
  * snapshot load records the failure in state instead of rejecting.
  * @module @Yujyf/dsh-remote-workspace/client/model
  */
 import type { SessionId } from '@deepseek-ai/dsh-session/types';
-import type { RemoteFailure } from '@deepseek-ai/dsh-typert-protocol';
-import type { RemoteWorkspaceNamespace } from './namespace.ts';
+import type { RemoteWorkspaceApiFailure } from '../api-wire.ts';
+import type { IRemoteWorkspaceApi } from './api.ts';
 import type { RemoteDirectoryListing, RemoteWorkspace, RemoteWorkspaceId, TargetHealth, WorkspaceTarget, WorkspaceTargetId } from '../wire-types.ts';
 /** Lifecycle of the cached catalog. */
 export type RemoteWorkspacePhase = 'idle' | 'loading' | 'ready' | 'error';
@@ -39,13 +39,13 @@ export interface RemoteWorkspaceSource {
 /** One failed remote-workspace command, with the Host business code preserved. */
 export declare class RemoteWorkspaceCommandError extends Error {
     readonly operation: string;
-    readonly rpcError: RemoteFailure;
+    readonly rpcError: RemoteWorkspaceApiFailure;
     readonly name = "RemoteWorkspaceCommandError";
     /**
      * @param operation - the verb that failed.
-     * @param rpcError - Host business or folded carrier failure.
+     * @param rpcError - Host business or transport failure.
      */
-    constructor(operation: string, rpcError: RemoteFailure);
+    constructor(operation: string, rpcError: RemoteWorkspaceApiFailure);
 }
 /**
  * Owns the Client-side catalog cache and every catalog command. Loads coalesce:
@@ -58,8 +58,8 @@ export declare class ClientRemoteWorkspaceModel implements RemoteWorkspaceSource
     private snapshot;
     private cache;
     private inflight;
-    /** @param remote - the generated remote-workspace Remote namespace. */
-    constructor(remote: RemoteWorkspaceNamespace);
+    /** @param remote - the remote-workspace HTTP API client. */
+    constructor(remote: IRemoteWorkspaceApi);
     /**
      * Read the current snapshot.
      * @returns the identity-stable snapshot.

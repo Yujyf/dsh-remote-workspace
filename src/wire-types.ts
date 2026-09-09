@@ -1,6 +1,6 @@
 /**
- * Browser-safe request and result vocabulary for the remote-workspace Remote
- * namespace. Types only.
+ * Browser-safe request and result vocabulary of the remote-workspace HTTP API.
+ * Types only.
  * @module @Yujyf/dsh-remote-workspace
  */
 
@@ -20,17 +20,6 @@ export type {
   WorkspaceTarget,
   WorkspaceTargetId,
 } from './types.ts'
-
-declare module '@deepseek-ai/dsh-typert-protocol' {
-  interface RemoteErrorDetailsMap {
-    /** The named execution target cannot be found or started. */
-    'remote-workspace/target-unavailable': { readonly targetId: WorkspaceTargetId }
-    /** The named remote workspace is not registered. */
-    'remote-workspace/not-found': { readonly workspaceId: RemoteWorkspaceId }
-    /** The path cannot be listed or created on that target. */
-    'remote-workspace/path-failed': { readonly path: string }
-  }
-}
 
 /** Create-workspace request. */
 export interface RemoteWorkspaceCreateRequest {
