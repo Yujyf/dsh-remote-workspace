@@ -68,9 +68,11 @@ export declare class RemoteWorkspaceRuntime extends Service {
     /** Open the domain and rebuild the in-memory order. */
     protected [Service.init](): Promise<void>;
     /**
-     * Discover currently reachable targets. Local is always present; WSL
-     * distributions appear only on Windows when `wsl.exe` is installed.
-     * @returns the live target catalog.
+     * Discover the remote execution worlds a session can be bound to. The
+     * host-local world is never listed: a session that is not bound already runs
+     * there, so it is not a remote workspace. WSL distributions appear on Windows
+     * when `wsl.exe` is installed.
+     * @returns the live remote target catalog.
      */
     listTargets(): Promise<WorkspaceTarget[]>;
     /**

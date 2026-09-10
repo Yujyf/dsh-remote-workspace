@@ -85,6 +85,24 @@ test('a non-JSON response body reports the HTTP status', async () => {
   )
 })
 
+test('a void verb accepts the explicit null the host sends', async () => {
+  const api = new RemoteWorkspaceApi()
+  await withFetch(async () => jsonResponse(200, { ok: true, value: null }), async () => {
+    const result = await api.connectWorkspace({ workspaceId: 'rw-1' })
+    assert.equal(result.ok, true)
+    assert.equal(result.value, null)
+  })
+})
+
+test('a void verb tolerates an omitted value key instead of reporting a transport error', async () => {
+  const api = new RemoteWorkspaceApi()
+  await withFetch(async () => jsonResponse(200, { ok: true }), async () => {
+    const result = await api.bindSession({ workspaceId: 'rw-1', sessionId: 's-1' })
+    assert.equal(result.ok, true)
+    assert.equal(result.value, null)
+  })
+})
+
 test('an unrecognized envelope reports the HTTP status instead of throwing', async () => {
   const api = new RemoteWorkspaceApi()
   await withFetch(async () => jsonResponse(200, { value: 'unexpected' }), async () => {

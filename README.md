@@ -8,10 +8,12 @@ Run one DSH session inside a **Local** or **WSL** execution world, chosen per se
 
 DSH ships one filesystem backend and one subprocess backend per profile. This package replaces both with **routers**: every existing model tool (`bash`, `read_file`, `write_file`, `edit_file`, …) keeps its name and schema, while the backend underneath resolves the session's current workspace binding and delegates to the right execution world.
 
-- **Local target** — the shipped sandboxed local backend, unchanged.
+- **No binding** — the shipped sandboxed local backend, unchanged. This is what every session uses until it is bound.
 - **WSL target** — a distribution reached through `wsl.exe`; file and process operations run inside that distribution with POSIX paths, its own home, and its own toolchain.
 
 One sidebar entry registers the selector: pick a target, browse to a folder, register it as a workspace, and bind it to the open session. From the next model request on, that session's tools execute there.
+
+The selector lists **remote** worlds only. The host's own world is never offered, because a session with nothing bound already runs there; on a Windows host the list is one row per WSL distribution.
 
 ## Requirements
 
@@ -19,10 +21,10 @@ One sidebar entry registers the selector: pick a target, browse to a folder, reg
 |---|---|
 | DSH | `>=0.1.0 <0.2`; verified on `0.1.2-rc.1` (the version the desktop app ships) and built against the `0.1.5-alpha.2` type surface |
 | Node | `^22.19 \|\| >=24` |
-| OS | Windows 10/11 for WSL targets; the Local target also works on macOS and Linux |
+| OS | Windows 10/11 for WSL targets; on macOS and Linux the selector has no remote world to offer |
 | WSL | `wsl.exe` on `PATH`, with at least one registered distribution |
 
-WSL targets are only enumerated on Windows (`process.platform === 'win32'`); elsewhere the target list contains the Local target alone.
+WSL targets are only enumerated on Windows (`process.platform === 'win32'`). On every other platform the remote target list is empty, and sessions keep running in the host world.
 
 ## Install
 
@@ -42,7 +44,7 @@ dsh plugin --profile web remove @yujyf/dsh-remote-workspace
 
 1. Open a session in the Web GUI.
 2. Click **Remote workspace** at the bottom of the sidebar.
-3. Pick a target. The status dot shows `Available`, `Starting`, `Stopped`, or `Unavailable`.
+3. Pick a WSL distribution. The status dot shows `Available`, `Starting`, `Stopped`, or `Unavailable`; connecting a `Stopped` distribution starts it.
 4. **Browse folders…**, navigate to the project directory, and choose **Use this folder**. The folder is registered as a workspace and connected.
 5. Click **Use in this session** on a workspace row. The panel header then reads *This session runs here*; `bash`, file reads, and file edits for that session execute in that workspace.
 6. **Remove** deletes the registration only — the folder and its files stay untouched.

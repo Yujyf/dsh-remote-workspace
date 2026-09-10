@@ -184,13 +184,15 @@ export class RemoteWorkspaceRuntime extends Service {
   }
 
   /**
-   * Discover currently reachable targets. Local is always present; WSL
-   * distributions appear only on Windows when `wsl.exe` is installed.
-   * @returns the live target catalog.
+   * Discover the remote execution worlds a session can be bound to. The
+   * host-local world is never listed: a session that is not bound already runs
+   * there, so it is not a remote workspace. WSL distributions appear on Windows
+   * when `wsl.exe` is installed.
+   * @returns the live remote target catalog.
    */
   async listTargets(): Promise<WorkspaceTarget[]> {
-    const targets: WorkspaceTarget[] = [localHostTarget()]
-    if (process.platform !== 'win32') return targets
+    if (process.platform !== 'win32') return []
+    const targets: WorkspaceTarget[] = []
     try {
       const distributions = await listWslDistributions(this.config.commandTimeoutMs)
       for (const distribution of distributions) {

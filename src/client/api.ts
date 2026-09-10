@@ -172,8 +172,10 @@ async function readEnvelope<T>(response: Response): Promise<RemoteWorkspaceApiEn
   }
   if (typeof parsed !== 'object' || parsed === null) return undefined
   const envelope = parsed as { ok?: unknown; value?: unknown; error?: unknown }
-  if (envelope.ok === true && 'value' in envelope) {
-    return { ok: true, value: envelope.value as T }
+  if (envelope.ok === true) {
+    // A verb that returns nothing answers `value: null`; a missing key means
+    // the same thing rather than a transport failure on a successful call.
+    return { ok: true, value: (envelope.value ?? null) as T }
   }
   const error = envelope.error
   if (typeof error === 'object' && error !== null) {
