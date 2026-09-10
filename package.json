@@ -1,6 +1,6 @@
 {
   "name": "@yujyf/dsh-remote-workspace",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Local/WSL remote-workspace execution routing for DeepSeek Harness: a profile bundle plus the sidebar workspace selector",
   "license": "MIT",
   "type": "module",

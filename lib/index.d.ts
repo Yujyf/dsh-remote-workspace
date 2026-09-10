@@ -171,6 +171,16 @@ export declare class RemoteWorkspaceRuntime extends Service {
      * @returns a workspace record, or `undefined` for a host-local directory.
      */
     private workspaceForHostPath;
+    /**
+     * Put one remote workspace into DSH's own workspace registry when it is not
+     * there yet. That entry is what makes the workspace visible in DSH's list and
+     * to every other plugin; a registration stored before this package wrote one
+     * is repaired here, on the next create or connect.
+     * @param id - registration id.
+     * @param record - its stored record.
+     * @returns the record, with the created workspace id when one was added.
+     */
+    private ensureHostWorkspace;
     /** The workspace registry, when the deployment mounts one. */
     private hostRegistry;
     /** Host workspace ids this owner created, from the live registry records. */

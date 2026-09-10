@@ -334,7 +334,8 @@ export class RemoteWorkspaceRuntime extends Service {
       const parsed = parseWorkspaceUri(uri)
       const table = this.requireTable()
       for (const [id, record] of table.entries()) {
-        if (record.uri === parsed.href) return this.toWorkspace(id, record)
+        if (record.uri !== parsed.href) continue
+        return this.toWorkspace(id, await this.ensureHostWorkspace(id, record))
       }
       const targetId = this.targetIdOf(parsed)
       const id = RemoteWorkspaceId(randomUUID())
@@ -535,6 +536,25 @@ export class RemoteWorkspaceRuntime extends Service {
     }
   }
 
+  /**
+   * Put one remote workspace into DSH's own workspace registry when it is not
+   * there yet. That entry is what makes the workspace visible in DSH's list and
+   * to every other plugin; a registration stored before this package wrote one
+   * is repaired here, on the next create or connect.
+   * @param id - registration id.
+   * @param record - its stored record.
+   * @returns the record, with the created workspace id when one was added.
+   */
+  private async ensureHostWorkspace(id: RemoteWorkspaceId, record: RemoteWorkspaceRecord): Promise<RemoteWorkspaceRecord> {
+    if (record.hostWorkspaceId !== undefined) return record
+    const parsed = parseWorkspaceUri(record.uri)
+    const hostWorkspaceId = await this.registerHostWorkspace(parsed, record.title)
+    if (hostWorkspaceId === undefined) return record
+    const updated: RemoteWorkspaceRecord = { ...record, hostWorkspaceId }
+    await this.requireTable().put(id, updated)
+    return updated
+  }
+
   /** The workspace registry, when the deployment mounts one. */
   private hostRegistry(): HostWorkspaceRegistry | undefined {
     return this.ctx.get('workspaceRegistry') as HostWorkspaceRegistry | undefined
@@ -630,7 +650,7 @@ export class RemoteWorkspaceRuntime extends Service {
    * @returns the live binding.
    */
   async connectWorkspace(workspaceId: RemoteWorkspaceId): Promise<ExecutionBinding> {
-    const workspace = this.getWorkspace(workspaceId)
+    let workspace = this.getWorkspace(workspaceId)
     if (workspace === undefined) {
       throw new WorkspaceError(`remote workspace '${workspaceId}' was not found`, 'PATH_NOT_FOUND', {
         workspaceId,
@@ -641,6 +661,10 @@ export class RemoteWorkspaceRuntime extends Service {
       const bridge = this.bridgeFor(parsed.authority)
       await bridge.connect()
       await bridge.request('REALPATH', parsed.path)
+      // The distribution is running now, which is the only moment its UNC share
+      // resolves — the moment to repair a registration that has no DSH entry.
+      const record = this.requireTable().get(workspaceId)
+      if (record !== undefined) workspace = this.toWorkspace(workspaceId, await this.ensureHostWorkspace(workspaceId, record))
     }
     if (parsed.type !== 'local' && parsed.type !== 'wsl') {
       throw new WorkspaceError(`cannot connect to unsupported target type '${parsed.type}'`, 'UNSUPPORTED', {
