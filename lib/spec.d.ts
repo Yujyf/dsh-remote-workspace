@@ -18,6 +18,7 @@ export declare const remoteWorkspaceRecord: z.ZodObject<{
     createdAt: z.ZodNumber;
     lastUsedAt: z.ZodNumber;
     sessionIds: z.ZodArray<z.ZodPipe<z.ZodString, z.ZodTransform<SessionId, string>>>;
+    hostWorkspaceId: z.ZodOptional<z.ZodString>;
 }, z.core.$strip>;
 /** One stored remote workspace record. */
 export type RemoteWorkspaceRecord = z.infer<typeof remoteWorkspaceRecord>;
@@ -57,6 +58,7 @@ export declare const remoteWorkspaceDomainSpec: {
             createdAt: number;
             lastUsedAt: number;
             sessionIds: SessionId[];
+            hostWorkspaceId?: string | undefined;
         }>;
     };
 };

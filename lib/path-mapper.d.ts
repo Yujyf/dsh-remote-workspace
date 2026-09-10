@@ -3,6 +3,7 @@
  * default filesystem backend.
  * @module @Yujyf/dsh-remote-workspace
  */
+import type { WorkspaceUri } from './types.ts';
 /**
  * Convert a WSL path under `/mnt/<drive>/` into a Windows path. Paths outside
  * that prefix have no host mapping through this lexical converter.
@@ -24,6 +25,23 @@ export declare function windowsPathToWslMount(hostPath: string): string;
  * @returns `\\wsl.localhost\<distro>\...`.
  */
 export declare function wslPathToUnc(distro: string, targetPath: string): string;
+/**
+ * Host path that views the same directory as a workspace URI. DSH's own
+ * workspace registry only accepts directories the harness process can resolve,
+ * so a WSL workspace reaches it through the distribution's UNC share.
+ * @param uri - canonical workspace URI record.
+ * @returns the host path, or `undefined` for a target type with no host view.
+ */
+export declare function hostPathOfWorkspace(uri: WorkspaceUri): string | undefined;
+/**
+ * Whether two UNC spellings name the same share path. Windows comparisons are
+ * case-insensitive and separator-insensitive, and a trailing separator is not
+ * identity.
+ * @param left - first UNC path.
+ * @param right - second UNC path.
+ * @returns true when both canonicals match.
+ */
+export declare function uncPathsEqual(left: string, right: string): boolean;
 /**
  * Path mapper for one connected target. Local mapping is identity; WSL mapping
  * converts `/mnt/<drive>` mounts and optional UNC spellings.

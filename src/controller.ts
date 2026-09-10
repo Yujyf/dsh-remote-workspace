@@ -6,7 +6,6 @@
 
 import { Context, Service } from '@deepseek-ai/cordis'
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import { REMOTE_WORKSPACE_API_PREFIX, type RemoteWorkspaceApiEnvelope, type RemoteWorkspaceApiFailure, type RemoteWorkspaceVerb } from './api-wire.ts'
 import { WorkspaceError } from './errors.ts'
 import { WorkspaceTargetId } from './types.ts'
@@ -56,20 +55,6 @@ interface WebServerFace {
 interface WebRuntimeFace {
   /** Non-loopback authorities this deployment serves. */
   readonly trustedHosts?: readonly string[]
-}
-
-/**
- * The one `ctx.workspaceRegistry` capability this route reads. Declared locally
- * because the published workspace package ships no type declarations.
- */
-interface WorkspaceRegistryFace {
-  /** Every built-in workspace, in registry order. */
-  list(): readonly {
-    readonly id: string
-    readonly title: string
-    readonly path: string
-    readonly sessionIds: readonly SessionId[]
-  }[]
 }
 
 /** Largest request body accepted, in bytes. Every verb's payload is tiny. */
@@ -253,10 +238,8 @@ export class RemoteWorkspaceController extends Service {
    * @returns the built-in workspace rows.
    */
   listLocalWorkspaces(): LocalWorkspaceListValue {
-    const registry = this.ctx.get('workspaceRegistry') as WorkspaceRegistryFace | undefined
-    if (registry === undefined) return { workspaces: [] }
     return {
-      workspaces: registry.list().map(workspace => ({
+      workspaces: this.ctx.remoteWorkspace.listHostWorkspaces().map(workspace => ({
         id: workspace.id,
         title: workspace.title,
         path: workspace.path,

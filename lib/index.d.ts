@@ -10,10 +10,17 @@ import { type PathMapper } from './path-mapper.ts';
 import { WslBridge } from './wsl-bridge.ts';
 import { RemoteWorkspaceId, WorkspaceTargetId } from './types.ts';
 import type { RemoteDirectoryListing, RemoteWorkspace, TargetHealth, WorkspaceTarget, WorkspaceUri } from './types.ts';
+/** One DSH workspace row, as the selector shows it for context. */
+export interface HostWorkspaceRow {
+    readonly id: string;
+    readonly title: string;
+    readonly path: string;
+    readonly sessionIds: readonly SessionId[];
+}
 export { WorkspaceError } from './errors.ts';
 export type { WorkspaceErrorCode } from './errors.ts';
 export { defaultRemoteWorkspaceTitle, formatWorkspaceUri, normalizePosixPath, normalizeWindowsPath, parseWorkspaceUri, uriPathToWindowsPath, windowsPathToUriPath, workspaceUriEquals, workspaceUriFromNative, workspaceUriFromWslUnc, } from './uri.ts';
-export { localPathMapper, windowsPathToWslMount, wslPathMapper, wslPathToUnc, wslPathToWindowsMount, } from './path-mapper.ts';
+export { hostPathOfWorkspace, localPathMapper, uncPathsEqual, windowsPathToWslMount, wslPathMapper, wslPathToUnc, wslPathToWindowsMount, } from './path-mapper.ts';
 export type { PathMapper } from './path-mapper.ts';
 export { LOCAL_CAPABILITIES, WSL_CAPABILITIES } from './capabilities.ts';
 export { decodeWslListOutput, parseWslList } from './wsl-list.ts';
@@ -110,11 +117,19 @@ export declare class RemoteWorkspaceRuntime extends Service {
      */
     createWorkspace(uri: string, title?: string): Promise<RemoteWorkspace>;
     /**
-     * Delete one workspace registration. Sessions and target files are retained.
+     * Delete one workspace registration and the DSH workspace it created.
+     * Sessions and target files are retained.
      * @param id - Workspace to remove.
      * @returns true when a record was deleted.
      */
     removeWorkspace(id: RemoteWorkspaceId): Promise<boolean>;
+    /**
+     * DSH's own workspaces, minus the entries this owner created. The selector
+     * shows those under their remote world instead, so listing them twice would
+     * double every WSL workspace.
+     * @returns host workspace rows in registry order.
+     */
+    listHostWorkspaces(): HostWorkspaceRow[];
     /**
      * Bind a session to a remote workspace. The session's `header.cwd` should be
      * the target-native path; this table is the execution-world authority.
@@ -141,6 +156,40 @@ export declare class RemoteWorkspaceRuntime extends Service {
      * @returns the binding, or `undefined` when the session is not remote-bound.
      */
     bindingForSession(sessionId: SessionId): ExecutionBinding | undefined;
+    /**
+     * Execution world for one workspace record.
+     * @param workspace - registered remote workspace.
+     * @param sourceCwd - directory DSH recorded for the session, when known.
+     * @returns the binding, or `undefined` for an unsupported target type.
+     */
+    private bindingForWorkspace;
+    /**
+     * The registration whose DSH workspace views one host directory, or a derived
+     * record when the directory is a WSL share no registration owns (a workspace
+     * the user added through DSH's own surface by naming the share path).
+     * @param hostPath - directory DSH recorded for a session.
+     * @returns a workspace record, or `undefined` for a host-local directory.
+     */
+    private workspaceForHostPath;
+    /** The workspace registry, when the deployment mounts one. */
+    private hostRegistry;
+    /** Host workspace ids this owner created, from the live registry records. */
+    private ownedHostWorkspaceIds;
+    /**
+     * Put one remote workspace into DSH's own workspace registry, under the
+     * distribution's UNC view of its directory. That entry is what makes the
+     * workspace visible in DSH's workspace list and to every other plugin; the
+     * UNC path resolves only while the distribution runs, so connect first.
+     * @param parsed - parsed WSL workspace URI.
+     * @param title - caller title, when one was given.
+     * @returns the created workspace id, or `undefined` when nothing was created.
+     */
+    private registerHostWorkspace;
+    /**
+     * Remove the DSH workspace this owner created, when it still exists.
+     * @param hostWorkspaceId - workspace id recorded at creation.
+     */
+    private deleteHostWorkspace;
     /**
      * Working directory DSH recorded for one session. The header is immutable, so
      * this is the directory the session keeps for its whole life; the routers

@@ -19,8 +19,10 @@ import {
   defaultRemoteWorkspaceTitle,
   parseWorkspaceUri,
   workspaceUriFromNative,
+  workspaceUriFromWslUnc,
 } from './uri.ts'
 import { localPathMapper, wslPathMapper, type PathMapper } from './path-mapper.ts'
+import { hostPathOfWorkspace, uncPathsEqual } from './path-mapper.ts'
 import { listWslDistributions, terminateWslDistribution, WslBridge } from './wsl-bridge.ts'
 import { remoteWorkspaceDomainSpec } from './spec.ts'
 import { RemoteWorkspaceId, WorkspaceTargetId } from './types.ts'
@@ -35,6 +37,41 @@ import type {
   WorkspaceTargetType,
   WorkspaceUri,
 } from './types.ts'
+
+/**
+ * The `ctx.workspaceRegistry` capability this owner writes. Declared locally
+ * because the published workspace package ships no type declarations.
+ */
+interface HostWorkspaceRegistry {
+  /**
+   * Create or reuse the workspace for a directory that must already resolve.
+   * @param path - host directory.
+   * @param title - display title used only when creating.
+   * @returns the workspace entity.
+   */
+  create(path: string, title: string): Promise<{ readonly id: string; readonly path: string; readonly title: string }>
+  /**
+   * Remove one workspace from the registry.
+   * @param id - workspace id.
+   * @returns resolution after deletion.
+   */
+  delete(id: string): Promise<void>
+  /** Every registered workspace, in display order. */
+  list(): readonly {
+    readonly id: string
+    readonly title: string
+    readonly path: string
+    readonly sessionIds: readonly SessionId[]
+  }[]
+}
+
+/** One DSH workspace row, as the selector shows it for context. */
+export interface HostWorkspaceRow {
+  readonly id: string
+  readonly title: string
+  readonly path: string
+  readonly sessionIds: readonly SessionId[]
+}
 
 /** Target types this owner can build identity for; a reserved type has no provider yet. */
 const KNOWN_TARGET_TYPES = new Set<WorkspaceTargetType>(['local', 'wsl'])
@@ -64,7 +101,9 @@ export {
   workspaceUriFromWslUnc,
 } from './uri.ts'
 export {
+  hostPathOfWorkspace,
   localPathMapper,
+  uncPathsEqual,
   windowsPathToWslMount,
   wslPathMapper,
   wslPathToUnc,
@@ -300,6 +339,10 @@ export class RemoteWorkspaceRuntime extends Service {
       const targetId = this.targetIdOf(parsed)
       const id = RemoteWorkspaceId(randomUUID())
       const now = Date.now()
+      // Register the DSH workspace first: a failure there (a stopped
+      // distribution cannot resolve its own UNC share) must not leave a
+      // half-created registration behind.
+      const hostWorkspaceId = await this.registerHostWorkspace(parsed, title)
       const record: RemoteWorkspaceRecord = {
         targetId,
         uri: parsed.href,
@@ -308,6 +351,7 @@ export class RemoteWorkspaceRuntime extends Service {
         createdAt: now,
         lastUsedAt: now,
         sessionIds: [],
+        ...(hostWorkspaceId === undefined ? {} : { hostWorkspaceId }),
       }
       await table.put(id, record)
       const state = this.requireState()
@@ -320,14 +364,16 @@ export class RemoteWorkspaceRuntime extends Service {
   }
 
   /**
-   * Delete one workspace registration. Sessions and target files are retained.
+   * Delete one workspace registration and the DSH workspace it created.
+   * Sessions and target files are retained.
    * @param id - Workspace to remove.
    * @returns true when a record was deleted.
    */
   removeWorkspace(id: RemoteWorkspaceId): Promise<boolean> {
     return this.enqueue(async () => {
       const table = this.requireTable()
-      if (table.get(id) === undefined) return false
+      const record = table.get(id)
+      if (record === undefined) return false
       const state = this.requireState()
       const sessionBindings = { ...state.sessionBindings }
       for (const [sessionId, workspaceId] of Object.entries(sessionBindings)) {
@@ -338,8 +384,29 @@ export class RemoteWorkspaceRuntime extends Service {
         workspaceIds: state.workspaceIds.filter(workspaceId => workspaceId !== id),
         sessionBindings,
       })
+      if (record.hostWorkspaceId !== undefined) await this.deleteHostWorkspace(record.hostWorkspaceId)
       return true
     })
+  }
+
+  /**
+   * DSH's own workspaces, minus the entries this owner created. The selector
+   * shows those under their remote world instead, so listing them twice would
+   * double every WSL workspace.
+   * @returns host workspace rows in registry order.
+   */
+  listHostWorkspaces(): HostWorkspaceRow[] {
+    const registry = this.hostRegistry()
+    if (registry === undefined) return []
+    const owned = this.ownedHostWorkspaceIds()
+    return registry.list()
+      .filter(workspace => !owned.has(workspace.id))
+      .map(workspace => ({
+        id: workspace.id,
+        title: workspace.title,
+        path: workspace.path,
+        sessionIds: [...workspace.sessionIds],
+      }))
   }
 
   /**
@@ -402,28 +469,118 @@ export class RemoteWorkspaceRuntime extends Service {
    * @returns the binding, or `undefined` when the session is not remote-bound.
    */
   bindingForSession(sessionId: SessionId): ExecutionBinding | undefined {
-    const workspace = this.workspaceForSession(sessionId)
-    if (workspace === undefined) return undefined
     const sourceCwd = this.sessionDirectory(sessionId)
+    const bound = this.workspaceForSession(sessionId)
+    if (bound !== undefined) return this.bindingForWorkspace(bound, sourceCwd)
+    // A session whose directory is a WSL share runs in that distribution even
+    // without a binding record: DSH created it in one of the workspaces this
+    // owner registered, and the directory already names the world.
+    if (sourceCwd === undefined) return undefined
+    const derived = this.workspaceForHostPath(sourceCwd)
+    return derived === undefined ? undefined : this.bindingForWorkspace(derived, sourceCwd)
+  }
+
+  /**
+   * Execution world for one workspace record.
+   * @param workspace - registered remote workspace.
+   * @param sourceCwd - directory DSH recorded for the session, when known.
+   * @returns the binding, or `undefined` for an unsupported target type.
+   */
+  private bindingForWorkspace(workspace: RemoteWorkspace, sourceCwd: string | undefined): ExecutionBinding | undefined {
     const parsed = parseWorkspaceUri(workspace.uri)
+    const carried = sourceCwd === undefined ? {} : { sourceCwd }
     if (parsed.type === 'local') {
       return {
         workspace,
         target: localHostTarget(),
         cwd: workspace.cwd,
         pathMapper: localPathMapper(),
-        ...(sourceCwd === undefined ? {} : { sourceCwd }),
+        ...carried,
       }
     }
     if (parsed.type !== 'wsl') return undefined
-    const target = this.targetFromDistribution(parsed.authority, 'unknown')
     return {
       workspace,
-      target,
+      target: this.targetFromDistribution(parsed.authority, 'unknown'),
       cwd: workspace.cwd,
       pathMapper: wslPathMapper(),
       bridge: this.bridgeFor(parsed.authority),
-      ...(sourceCwd === undefined ? {} : { sourceCwd }),
+      ...carried,
+    }
+  }
+
+  /**
+   * The registration whose DSH workspace views one host directory, or a derived
+   * record when the directory is a WSL share no registration owns (a workspace
+   * the user added through DSH's own surface by naming the share path).
+   * @param hostPath - directory DSH recorded for a session.
+   * @returns a workspace record, or `undefined` for a host-local directory.
+   */
+  private workspaceForHostPath(hostPath: string): RemoteWorkspace | undefined {
+    for (const [id, record] of this.requireTable().entries()) {
+      const view = hostPathOfWorkspace(parseWorkspaceUri(record.uri))
+      if (view !== undefined && uncPathsEqual(view, hostPath)) return this.toWorkspace(id, record)
+    }
+    const derived = workspaceUriFromWslUnc(hostPath)
+    if (derived === undefined) return undefined
+    return {
+      id: RemoteWorkspaceId(derived.href),
+      targetId: this.targetIdOf(derived),
+      uri: derived.href,
+      cwd: derived.path,
+      title: defaultRemoteWorkspaceTitle(derived),
+      createdAt: 0,
+      lastUsedAt: 0,
+      sessionIds: [],
+    }
+  }
+
+  /** The workspace registry, when the deployment mounts one. */
+  private hostRegistry(): HostWorkspaceRegistry | undefined {
+    return this.ctx.get('workspaceRegistry') as HostWorkspaceRegistry | undefined
+  }
+
+  /** Host workspace ids this owner created, from the live registry records. */
+  private ownedHostWorkspaceIds(): Set<string> {
+    const ids = new Set<string>()
+    for (const [, record] of this.requireTable().entries()) {
+      if (record.hostWorkspaceId !== undefined) ids.add(record.hostWorkspaceId)
+    }
+    return ids
+  }
+
+  /**
+   * Put one remote workspace into DSH's own workspace registry, under the
+   * distribution's UNC view of its directory. That entry is what makes the
+   * workspace visible in DSH's workspace list and to every other plugin; the
+   * UNC path resolves only while the distribution runs, so connect first.
+   * @param parsed - parsed WSL workspace URI.
+   * @param title - caller title, when one was given.
+   * @returns the created workspace id, or `undefined` when nothing was created.
+   */
+  private async registerHostWorkspace(parsed: WorkspaceUri, title: string | undefined): Promise<string | undefined> {
+    const registry = this.hostRegistry()
+    const hostPath = hostPathOfWorkspace(parsed)
+    if (registry === undefined || hostPath === undefined) return undefined
+    if (parsed.type === 'wsl') await this.bridgeFor(parsed.authority).connect()
+    const name = title ?? defaultRemoteWorkspaceTitle(parsed)
+    const workspace = await registry.create(hostPath, `${name} · WSL ${parsed.authority}`)
+    return workspace.id
+  }
+
+  /**
+   * Remove the DSH workspace this owner created, when it still exists.
+   * @param hostWorkspaceId - workspace id recorded at creation.
+   */
+  private async deleteHostWorkspace(hostWorkspaceId: string): Promise<void> {
+    const registry = this.hostRegistry()
+    if (registry === undefined) return
+    try {
+      await registry.delete(hostWorkspaceId)
+    } catch (error: unknown) {
+      // The user may have removed the workspace through DSH's own surface
+      // first; removing a registration must not fail on that.
+      if (!(error instanceof Error)) throw error
     }
   }
 

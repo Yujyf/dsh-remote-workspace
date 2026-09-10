@@ -5,6 +5,7 @@
  */
 
 import { normalizePosixPath, normalizeWindowsPath } from './uri.ts'
+import type { WorkspaceUri } from './types.ts'
 
 const MNT_DRIVE = /^\/mnt\/([a-z])(?:\/(.*))?$/i
 
@@ -47,6 +48,35 @@ export function wslPathToUnc(distro: string, targetPath: string): string {
   const canonical = normalizePosixPath(targetPath)
   if (canonical === '/') return `\\\\wsl.localhost\\${distro}\\`
   return `\\\\wsl.localhost\\${distro}${canonical.replaceAll('/', '\\')}`
+}
+
+/**
+ * Host path that views the same directory as a workspace URI. DSH's own
+ * workspace registry only accepts directories the harness process can resolve,
+ * so a WSL workspace reaches it through the distribution's UNC share.
+ * @param uri - canonical workspace URI record.
+ * @returns the host path, or `undefined` for a target type with no host view.
+ */
+export function hostPathOfWorkspace(uri: WorkspaceUri): string | undefined {
+  if (uri.type === 'local') return uri.path
+  if (uri.type === 'wsl') return wslPathToUnc(uri.authority, uri.path)
+  return undefined
+}
+
+/**
+ * Whether two UNC spellings name the same share path. Windows comparisons are
+ * case-insensitive and separator-insensitive, and a trailing separator is not
+ * identity.
+ * @param left - first UNC path.
+ * @param right - second UNC path.
+ * @returns true when both canonicals match.
+ */
+export function uncPathsEqual(left: string, right: string): boolean {
+  return canonicalUncPath(left) === canonicalUncPath(right)
+}
+
+function canonicalUncPath(path: string): string {
+  return path.replaceAll('/', '\\').replace(/\\+$/, '').toLowerCase()
 }
 
 /**

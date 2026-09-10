@@ -15,6 +15,8 @@ One sidebar entry registers the selector: pick a target, browse to a folder, reg
 
 The selector lists **remote** worlds only. The host's own world is never offered, because a session with nothing bound already runs there; on a Windows host the list is one row per WSL distribution. DSH's own workspaces appear beside them under **Local**, and the world filter narrows the list to a single execution world.
 
+Every remote workspace is also registered as a **DSH workspace**, under the distribution's UNC view of its directory (`\\wsl.localhost\Ubuntu-26.04\home\me\project`) and titled `<name> · WSL <distro>`. That entry is what puts the workspace into DSH's own workspace list and in front of every other plugin reading `ctx.workspaceRegistry`, instead of living only in this package's registry; removing the registration removes it again. A session created in that workspace from DSH's own surface runs in the distribution without any binding, because the session directory already names the world.
+
 **Run on the host again** releases the binding: the session goes back to running on the host, and nothing is deleted.
 
 ## Requirements
@@ -47,7 +49,7 @@ dsh plugin --profile web remove @yujyf/dsh-remote-workspace
 1. Open a session in the Web GUI.
 2. Click **Remote workspace** at the bottom of the sidebar. The list shows **Local** (DSH's own workspaces) plus every WSL distribution; the filter row above it narrows the list to one world.
 3. Pick a WSL distribution. The status dot shows `Available`, `Starting`, `Stopped`, or `Unavailable`; connecting a `Stopped` distribution starts it.
-4. **Browse folders…**, navigate to the project directory, and choose **Use this folder**. The folder is registered as a workspace and connected.
+4. **Browse folders…**, navigate to the project directory, and choose **Use this folder**. The folder is registered as a workspace, connected, and added to DSH's own workspace list as `<name> · WSL <distro>`.
 5. Click **Use in this session** on a workspace row. The panel header then reads *This session runs here · Ubuntu-26.04 · /home/me/project*, and `bash`, file reads, and file writes for that session execute in that directory. Relative paths resolve there, and the next request tells the model its world, directory, and to use `bash` instead of `pwsh`.
 6. **Run on the host again** releases the binding; **Remove** deletes the registration only — the folder and its files stay untouched.
 
@@ -102,6 +104,7 @@ Set on the inserted `remote-workspace` row in the profile's `cordis.yml` (defaul
 ## Known limitations
 
 - **Windows + WSL only for remote worlds.** SSH, Docker, and Podman targets are reserved by the target-type abstraction but not implemented.
+- **The DSH workspace entry carries the UNC path.** DSH's workspace registry only accepts a directory the harness process resolves, so the registered workspace is `\\wsl.localhost\<distro>\…`; that is also what a session created there records as its directory. Registering one therefore needs the distribution running (the flow connects first), and a distribution stopped afterwards leaves that workspace's directory unresolvable to DSH.
 - **One binding per session.** Rebinding mid-session is allowed; the previous world's processes are not migrated.
 - **The session header keeps its host directory.** DSH exposes no way to rewrite it, so the model's prompt still names the host path while the tools resolve in the bound world; the runtime-context note is what keeps the two consistent.
 - **`pwsh` cannot run in a bound session.** PowerShell does not exist inside WSL; the note directs the model to `bash`. The tool stays in the schema because DSH selects tools by host platform.

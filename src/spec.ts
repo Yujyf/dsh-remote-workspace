@@ -25,6 +25,13 @@ export const remoteWorkspaceRecord = z.object({
   createdAt: z.number(),
   lastUsedAt: z.number(),
   sessionIds: z.array(z.string().transform(value => brandString<SessionId>(value))),
+  /**
+   * The DSH workspace this registration also created, when the deployment
+   * mounts a workspace registry. That entry is what puts the remote workspace
+   * in DSH's own workspace list and in front of every other plugin; removing
+   * this registration removes it.
+   */
+  hostWorkspaceId: z.string().optional(),
 })
 
 /** One stored remote workspace record. */
