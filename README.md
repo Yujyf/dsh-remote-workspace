@@ -11,9 +11,11 @@ DSH ships one filesystem backend and one subprocess backend per profile. This pa
 - **No binding** — the shipped sandboxed local backend, unchanged. This is what every session uses until it is bound.
 - **WSL target** — a distribution reached through `wsl.exe`; file and process operations run inside that distribution with POSIX paths, its own home, and its own toolchain.
 
-One sidebar entry registers the selector: pick a target, browse to a folder, register it as a workspace, and bind it to the open session. From the next model request on, that session's tools execute there.
+One sidebar entry registers the selector: pick a target, browse to a folder, register it as a workspace, and bind it to the open session. From the next model request on, that session's shell commands, file reads and writes, and file searches execute there, with the bound directory as their working directory, and a runtime-context note tells the model which world it is in and to use `bash`.
 
-The selector lists **remote** worlds only. The host's own world is never offered, because a session with nothing bound already runs there; on a Windows host the list is one row per WSL distribution.
+The selector lists **remote** worlds only. The host's own world is never offered, because a session with nothing bound already runs there; on a Windows host the list is one row per WSL distribution. DSH's own workspaces appear beside them under **Local**, and the world filter narrows the list to a single execution world.
+
+**Run on the host again** releases the binding: the session goes back to running on the host, and nothing is deleted.
 
 ## Requirements
 
@@ -43,13 +45,13 @@ dsh plugin --profile web remove @yujyf/dsh-remote-workspace
 ## Use
 
 1. Open a session in the Web GUI.
-2. Click **Remote workspace** at the bottom of the sidebar.
+2. Click **Remote workspace** at the bottom of the sidebar. The list shows **Local** (DSH's own workspaces) plus every WSL distribution; the filter row above it narrows the list to one world.
 3. Pick a WSL distribution. The status dot shows `Available`, `Starting`, `Stopped`, or `Unavailable`; connecting a `Stopped` distribution starts it.
 4. **Browse folders…**, navigate to the project directory, and choose **Use this folder**. The folder is registered as a workspace and connected.
-5. Click **Use in this session** on a workspace row. The panel header then reads *This session runs here*; `bash`, file reads, and file edits for that session execute in that workspace.
-6. **Remove** deletes the registration only — the folder and its files stay untouched.
+5. Click **Use in this session** on a workspace row. The panel header then reads *This session runs here · Ubuntu-26.04 · /home/me/project*, and `bash`, file reads, and file writes for that session execute in that directory. Relative paths resolve there, and the next request tells the model its world, directory, and to use `bash` instead of `pwsh`.
+6. **Run on the host again** releases the binding; **Remove** deletes the registration only — the folder and its files stay untouched.
 
-A session with no binding keeps running locally. Binding is per session, so two open sessions can execute in two different worlds at the same time.
+A session with no binding keeps running on the host. Binding is per session, so two open sessions can execute in two different worlds at the same time.
 
 ## How it is wired
 
@@ -74,6 +76,16 @@ Design constraints this package holds to:
 - **No daemon, no runtime install.** The WSL bridge starts a helper process inside the distribution on demand and speaks a line protocol over stdio; no HTTP server, no Node or Python requirement inside WSL.
 - **No DSH core changes.** Everything composes through the published plugin and patch-layer contracts.
 
+### How a bound session works in its world
+
+DSH fixes a session's working directory when the session is created, and that header is immutable. Binding therefore does not rewrite the session; the routers translate each request instead:
+
+- The session's own host directory (`E:\work\project`) becomes the bound workspace directory (`/home/me/project`), which is where a defaulted or relative tool path lands.
+- Any other host path keeps its drive mapping (`C:\Users\me` is `/mnt/c/Users/me`), so an explicit `workdir` still reaches the host file it names.
+- A runtime-context entry, emitted only while the session is bound, states the distribution, the working directory, and that `bash` is the shell to use — PowerShell does not exist inside WSL.
+
+The session's recorded directory is read from the live session; the binding stays durable, so a restart rebinds the same world.
+
 ### Configuration
 
 Set on the inserted `remote-workspace` row in the profile's `cordis.yml` (defaults shown):
@@ -91,6 +103,8 @@ Set on the inserted `remote-workspace` row in the profile's `cordis.yml` (defaul
 
 - **Windows + WSL only for remote worlds.** SSH, Docker, and Podman targets are reserved by the target-type abstraction but not implemented.
 - **One binding per session.** Rebinding mid-session is allowed; the previous world's processes are not migrated.
+- **The session header keeps its host directory.** DSH exposes no way to rewrite it, so the model's prompt still names the host path while the tools resolve in the bound world; the runtime-context note is what keeps the two consistent.
+- **`pwsh` cannot run in a bound session.** PowerShell does not exist inside WSL; the note directs the model to `bash`. The tool stays in the schema because DSH selects tools by host platform.
 - **WSL file operations are per-call.** There is no persistent in-guest filesystem handle; each call crosses the bridge.
 - **Distribution termination is never automatic** unless you set `shutdownOnDisconnect: true`.
 

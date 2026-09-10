@@ -88,6 +88,13 @@ export function apply(ctx: ClientContext): void {
       }
       await catalog.bindSession(sessionId, workspaceId)
     },
+    unbindSession: async () => {
+      const sessionId = ctx.sessions.list.getSnapshot().current
+      if (sessionId === undefined) {
+        throw new Error('open a session before releasing a remote workspace')
+      }
+      await catalog.unbindSession(sessionId)
+    },
     removeWorkspace: workspaceId => catalog.removeWorkspace(workspaceId),
     currentSessionId: () => ctx.sessions.list.getSnapshot().current,
   })

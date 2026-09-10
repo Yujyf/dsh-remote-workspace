@@ -1,1 +1,1 @@
-{"version":3,"file":"RemoteWorkspaceEntry.d.ts","sourceRoot":"","sources":["../../src/client/RemoteWorkspaceEntry.tsx"],"names":[],"mappings":"AAoBA,OAAO,KAAK,EAAE,yBAAyB,EAAE,MAAM,eAAe,CAAA;AAoC9D;;;;GAIG;AACH,wBAAgB,oBAAoB,CAAC,KAAK,EAAE,yBAAyB,GAAG,KAAK,CAAC,YAAY,CAwSzF"}
+{"version":3,"file":"RemoteWorkspaceEntry.d.ts","sourceRoot":"","sources":["../../src/client/RemoteWorkspaceEntry.tsx"],"names":[],"mappings":"AAqBA,OAAO,KAAK,EAAE,yBAAyB,EAAE,MAAM,eAAe,CAAA;AAqC9D;;;;GAIG;AACH,wBAAgB,oBAAoB,CAAC,KAAK,EAAE,yBAAyB,GAAG,KAAK,CAAC,YAAY,CAqXzF"}

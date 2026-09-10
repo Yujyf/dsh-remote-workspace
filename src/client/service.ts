@@ -47,6 +47,11 @@ export interface IRemoteWorkspaces {
    */
   bindSession(sessionId: SessionId, workspaceId: RemoteWorkspaceId): Promise<void>
   /**
+   * Release one session's binding so its tools run on the host again.
+   * @param sessionId - session to unbind.
+   */
+  unbindSession(sessionId: SessionId): Promise<void>
+  /**
    * List one directory level on a target.
    * @param targetId - target to browse.
    * @param path - directory path; omitted lists the target's default root.
@@ -111,6 +116,15 @@ export class RemoteWorkspacesController extends Service implements IRemoteWorksp
 
   bindSession(sessionId: SessionId, workspaceId: RemoteWorkspaceId): Promise<void> {
     return this.model.bindSession(sessionId, workspaceId)
+  }
+
+  /**
+   * Release one session's binding so its tools run on the host again.
+   * @param sessionId - session to unbind.
+   * @returns resolution after durability.
+   */
+  unbindSession(sessionId: SessionId): Promise<void> {
+    return this.model.unbindSession(sessionId)
   }
 
   listDirectory(targetId: WorkspaceTargetId, path?: string): Promise<RemoteDirectoryListing> {

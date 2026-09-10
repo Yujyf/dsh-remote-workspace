@@ -5,7 +5,7 @@
  * @module @Yujyf/dsh-remote-workspace/client/api
  */
 import { type RemoteWorkspaceApiFailure } from '../api-wire.ts';
-import type { RemoteWorkspaceBindRequest, RemoteWorkspaceCreateDirectoryRequest, RemoteWorkspaceCreateRequest, RemoteWorkspaceCreateValue, RemoteWorkspaceHealthRequest, RemoteWorkspaceIdRequest, RemoteWorkspaceListDirectoryRequest, RemoteWorkspaceListValue, RemoteWorkspaceResolveUriRequest, RemoteWorkspaceResolveUriValue, RemoteWorkspaceTargetsValue } from '../wire-types.ts';
+import type { LocalWorkspaceListValue, RemoteWorkspaceBindRequest, RemoteWorkspaceCreateDirectoryRequest, RemoteWorkspaceCreateRequest, RemoteWorkspaceCreateValue, RemoteWorkspaceHealthRequest, RemoteWorkspaceIdRequest, RemoteWorkspaceListDirectoryRequest, RemoteWorkspaceListValue, RemoteWorkspaceResolveUriRequest, RemoteWorkspaceResolveUriValue, RemoteWorkspaceTargetsValue, RemoteWorkspaceUnbindRequest } from '../wire-types.ts';
 import type { RemoteDirectoryListing, TargetHealth } from '../wire-types.ts';
 /** Host envelope as the model consumes it. */
 export type RemoteWorkspaceResult<T> = {
@@ -83,6 +83,17 @@ export interface IRemoteWorkspaceApi {
      * @returns the empty success envelope.
      */
     bindSession(request: RemoteWorkspaceBindRequest): Promise<RemoteWorkspaceResult<null>>;
+    /**
+     * Release one session's binding so its tools run on the host again.
+     * @param request - Session identity.
+     * @returns the empty success envelope.
+     */
+    unbindSession(request: RemoteWorkspaceUnbindRequest): Promise<RemoteWorkspaceResult<null>>;
+    /**
+     * List DSH's own workspaces, shown beside the remote ones.
+     * @returns the built-in workspace rows.
+     */
+    listLocalWorkspaces(): Promise<RemoteWorkspaceResult<LocalWorkspaceListValue>>;
 }
 /** `fetch` implementation of the remote-workspace API. */
 export declare class RemoteWorkspaceApi implements IRemoteWorkspaceApi {
@@ -102,6 +113,8 @@ export declare class RemoteWorkspaceApi implements IRemoteWorkspaceApi {
         readonly path: string;
     }>>;
     bindSession(request: RemoteWorkspaceBindRequest): Promise<RemoteWorkspaceResult<null>>;
+    unbindSession(request: RemoteWorkspaceUnbindRequest): Promise<RemoteWorkspaceResult<null>>;
+    listLocalWorkspaces(): Promise<RemoteWorkspaceResult<LocalWorkspaceListValue>>;
     private call;
 }
 //# sourceMappingURL=api.d.ts.map

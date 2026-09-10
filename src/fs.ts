@@ -23,6 +23,8 @@ import { SandboxedFileSystem } from '@deepseek-ai/dsh-fs-sandbox'
 import type { SandboxExecutionPolicy, SandboxMode } from '@deepseek-ai/dsh-sandbox'
 import type {} from '@deepseek-ai/dsh-sandbox-policy'
 import { WslFileSystem } from './wsl-fs.ts'
+import { worldCwd } from './world-cwd.ts'
+import type { ExecutionBinding } from './index.ts'
 
 export type Config = LocalConfig
 
@@ -76,7 +78,8 @@ export class RemoteWorkspaceFileSystem extends FileSystem {
   }
 
   override resolve(path: string, opts?: { cwd?: string; signal?: AbortSignal }): Promise<FsTarget> {
-    return this.backend().resolve(path, opts)
+    const cwd = this.worldCwdOf(opts?.cwd)
+    return this.backend().resolve(path, opts === undefined || cwd === undefined ? opts : { ...opts, cwd })
   }
 
   override processPath(target: FsTarget): string {
@@ -100,7 +103,8 @@ export class RemoteWorkspaceFileSystem extends FileSystem {
   }
 
   override lstat(path: string, opts?: { cwd?: string }, signal?: AbortSignal): Promise<FsPathInfo | undefined> {
-    return this.backend().lstat(path, opts, signal)
+    const cwd = this.worldCwdOf(opts?.cwd)
+    return this.backend().lstat(path, opts === undefined || cwd === undefined ? opts : { ...opts, cwd }, signal)
   }
 
   override readText(target: FsTarget, signal?: AbortSignal): Promise<string> {
@@ -145,6 +149,23 @@ export class RemoteWorkspaceFileSystem extends FileSystem {
     sandboxPolicy?: SandboxExecutionPolicy,
   ): Promise<FsEditOutcome> {
     return this.backend().editText(target, edit, expected, signal, sandboxPolicy)
+  }
+
+  /**
+   * Translate a request cwd into the bound world's native spelling, so a
+   * relative path resolves inside the workspace the user picked instead of the
+   * host directory the session was created in.
+   */
+  private worldCwdOf(cwd: string | undefined): string | undefined {
+    const binding = this.wslBinding()
+    if (binding === undefined || cwd === undefined) return cwd
+    return worldCwd(binding, cwd)
+  }
+
+  /** The WSL binding whose backend should serve this call, when there is one. */
+  private wslBinding(): ExecutionBinding | undefined {
+    const binding = this.ctx.get('remoteWorkspace')?.currentBinding()
+    return binding?.target.type === 'wsl' && binding.bridge !== undefined ? binding : undefined
   }
 
   private backend(): FileSystem | WslFileSystem {

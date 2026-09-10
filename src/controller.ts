@@ -6,6 +6,7 @@
 
 import { Context, Service } from '@deepseek-ai/cordis'
 import type { IncomingMessage, ServerResponse } from 'node:http'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import { REMOTE_WORKSPACE_API_PREFIX, type RemoteWorkspaceApiEnvelope, type RemoteWorkspaceApiFailure, type RemoteWorkspaceVerb } from './api-wire.ts'
 import { WorkspaceError } from './errors.ts'
 import { WorkspaceTargetId } from './types.ts'
@@ -14,6 +15,7 @@ import type { RemoteWorkspaceId } from './types.ts'
 // that package rather than re-exporting them.
 import type { RemoteDirectoryListing, TargetHealth } from './wire-types.ts'
 import type {
+  LocalWorkspaceListValue,
   RemoteWorkspaceBindRequest,
   RemoteWorkspaceCreateDirectoryRequest,
   RemoteWorkspaceCreateRequest,
@@ -25,6 +27,7 @@ import type {
   RemoteWorkspaceResolveUriRequest,
   RemoteWorkspaceResolveUriValue,
   RemoteWorkspaceTargetsValue,
+  RemoteWorkspaceUnbindRequest,
 } from './wire-types.ts'
 
 export type * from './wire-types.ts'
@@ -53,6 +56,20 @@ interface WebServerFace {
 interface WebRuntimeFace {
   /** Non-loopback authorities this deployment serves. */
   readonly trustedHosts?: readonly string[]
+}
+
+/**
+ * The one `ctx.workspaceRegistry` capability this route reads. Declared locally
+ * because the published workspace package ships no type declarations.
+ */
+interface WorkspaceRegistryFace {
+  /** Every built-in workspace, in registry order. */
+  list(): readonly {
+    readonly id: string
+    readonly title: string
+    readonly path: string
+    readonly sessionIds: readonly SessionId[]
+  }[]
 }
 
 /** Largest request body accepted, in bytes. Every verb's payload is tiny. */
@@ -221,6 +238,33 @@ export class RemoteWorkspaceController extends Service {
     }
   }
 
+  /**
+   * Release one session's binding so its tools run on the host again.
+   * @param request - Session identity.
+   * @returns resolution after durability.
+   */
+  async unbindSession(request: RemoteWorkspaceUnbindRequest): Promise<void> {
+    await this.ctx.remoteWorkspace.unbindSession(request.sessionId)
+  }
+
+  /**
+   * List DSH's own workspaces, which the selector shows beside the remote ones.
+   * Empty when the deployment mounts no workspace registry.
+   * @returns the built-in workspace rows.
+   */
+  listLocalWorkspaces(): LocalWorkspaceListValue {
+    const registry = this.ctx.get('workspaceRegistry') as WorkspaceRegistryFace | undefined
+    if (registry === undefined) return { workspaces: [] }
+    return {
+      workspaces: registry.list().map(workspace => ({
+        id: workspace.id,
+        title: workspace.title,
+        path: workspace.path,
+        sessionIds: [...workspace.sessionIds],
+      })),
+    }
+  }
+
   /** Verb table: one entry per browser-callable method. */
   private verbs(): Record<RemoteWorkspaceVerb, VerbHandler> {
     return {
@@ -235,6 +279,8 @@ export class RemoteWorkspaceController extends Service {
       resolveUri: async payload => this.resolveUri(readResolveRequest(payload)),
       createDirectory: async payload => await this.createDirectory(readCreateDirectoryRequest(payload)),
       bindSession: async payload => await this.bindSession(readBindRequest(payload)),
+      unbindSession: async payload => await this.unbindSession(readUnbindRequest(payload)),
+      listLocalWorkspaces: async () => this.listLocalWorkspaces(),
     }
   }
 
@@ -398,6 +444,11 @@ function readBindRequest(payload: unknown): RemoteWorkspaceBindRequest {
     sessionId: requiredString(source, 'sessionId') as RemoteWorkspaceBindRequest['sessionId'],
     workspaceId: requiredString(source, 'workspaceId') as RemoteWorkspaceId,
   }
+}
+
+function readUnbindRequest(payload: unknown): RemoteWorkspaceUnbindRequest {
+  const source = asRecord(payload, 'unbindSession')
+  return { sessionId: requiredString(source, 'sessionId') as RemoteWorkspaceUnbindRequest['sessionId'] }
 }
 
 function mapError(error: unknown, workspaceId?: RemoteWorkspaceId): RemoteWorkspaceApiFailure {

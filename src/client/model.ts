@@ -11,6 +11,7 @@ import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { RemoteWorkspaceApiFailure } from '../api-wire.ts'
 import type { IRemoteWorkspaceApi } from './api.ts'
 import type {
+  LocalWorkspaceRow,
   RemoteDirectoryListing,
   RemoteWorkspace,
   RemoteWorkspaceId,
@@ -25,13 +26,18 @@ export type RemoteWorkspacePhase = 'idle' | 'loading' | 'ready' | 'error'
 /** Identity-stable Client view of the remote-workspace catalog. */
 export interface RemoteWorkspaceSnapshot {
   readonly phase: RemoteWorkspacePhase
-  /** Discovered targets, Local first then one entry per WSL distribution. */
+  /** Discovered remote worlds, one entry per WSL distribution. */
   readonly targets: readonly WorkspaceTarget[]
-  /** Durable workspace registrations in registry order. */
+  /** Durable remote workspace registrations in registry order. */
   readonly workspaces: readonly RemoteWorkspace[]
+  /** DSH's own workspaces, shown for context and never mutated here. */
+  readonly localWorkspaces: readonly LocalWorkspaceRow[]
   /** Host failure text from the last load, or null. */
   readonly error: string | null
 }
+
+/** Filter key of DSH's own workspaces in the selector. */
+export const LOCAL_WORLD_KEY = 'local'
 
 /** Bare observable source over {@link RemoteWorkspaceSnapshot}. */
 export interface RemoteWorkspaceSource {
@@ -61,7 +67,7 @@ export class RemoteWorkspaceCommandError extends Error {
   }
 }
 
-const EMPTY: RemoteWorkspaceSnapshot = { phase: 'idle', targets: [], workspaces: [], error: null }
+const EMPTY: RemoteWorkspaceSnapshot = { phase: 'idle', targets: [], workspaces: [], localWorkspaces: [], error: null }
 
 /**
  * Owns the Client-side catalog cache and every catalog command. Loads coalesce:
@@ -161,6 +167,17 @@ export class ClientRemoteWorkspaceModel implements RemoteWorkspaceSource {
   }
 
   /**
+   * Release one session's binding so its tools run on the host again.
+   * @param sessionId - session to unbind.
+   * @returns resolution after durability.
+   */
+  async unbindSession(sessionId: SessionId): Promise<void> {
+    const result = await this.remote.unbindSession({ sessionId })
+    if (!result.ok) throw new RemoteWorkspaceCommandError('unbindSession', result.error)
+    await this.refresh()
+  }
+
+  /**
    * List one directory level on a target.
    * @param targetId - target to browse.
    * @param path - directory path; omitted lists the target's default root.
@@ -210,9 +227,10 @@ export class ClientRemoteWorkspaceModel implements RemoteWorkspaceSource {
 
   private async load(): Promise<void> {
     this.publish({ ...this.snapshot, phase: 'loading', error: null })
-    const [targets, workspaces] = await Promise.all([
+    const [targets, workspaces, local] = await Promise.all([
       this.remote.listTargets(),
       this.remote.listWorkspaces(),
+      this.remote.listLocalWorkspaces(),
     ])
     if (!targets.ok) {
       this.publish({ ...this.snapshot, phase: 'error', error: failureText(targets.error) })
@@ -226,6 +244,9 @@ export class ClientRemoteWorkspaceModel implements RemoteWorkspaceSource {
       phase: 'ready',
       targets: targets.value.targets,
       workspaces: workspaces.value.workspaces,
+      // A deployment without the built-in workspace registry lists none; the
+      // selector still works, it just has no host-world rows to show.
+      localWorkspaces: local.ok ? local.value.workspaces : [],
       error: null,
     })
   }

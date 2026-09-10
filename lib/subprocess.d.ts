@@ -36,8 +36,11 @@ export declare class RemoteWorkspaceSubprocessRuntime extends SubprocessRuntime 
  */
 export declare function wslExecArgv(binding: ExecutionBinding, argv: readonly string[], cwd: string): string[];
 /**
- * Translate a spawn cwd into a POSIX path for `--cd`.
- * @param binding - WSL binding whose workspace cwd is the fallback.
+ * Translate a spawn cwd into a POSIX path for `--cd`. The session's own
+ * directory becomes the bound workspace, so a relative or defaulted command
+ * runs where the user pointed the workspace; every other host path keeps its
+ * `/mnt/<drive>` mapping.
+ * @param binding - WSL binding whose workspace cwd replaces the session directory.
  * @param cwd - Requested cwd.
  * @returns a POSIX path.
  */

@@ -39,6 +39,16 @@ import type {
 /** Target types this owner can build identity for; a reserved type has no provider yet. */
 const KNOWN_TARGET_TYPES = new Set<WorkspaceTargetType>(['local', 'wsl'])
 
+/** Runtime-context entry naming the execution world of a bound session. */
+const EXECUTION_WORLD_CONTEXT = 'remote-workspace:execution-world'
+
+/** Display name of the world the harness process itself runs in. */
+function hostWorldName(): string {
+  if (process.platform === 'win32') return 'Windows'
+  if (process.platform === 'darwin') return 'macOS'
+  return 'Linux'
+}
+
 export { WorkspaceError } from './errors.ts'
 export type { WorkspaceErrorCode } from './errors.ts'
 export {
@@ -63,6 +73,8 @@ export {
 export type { PathMapper } from './path-mapper.ts'
 export { LOCAL_CAPABILITIES, WSL_CAPABILITIES } from './capabilities.ts'
 export { decodeWslListOutput, parseWslList } from './wsl-list.ts'
+export { worldCwd, sameHostPath } from './world-cwd.ts'
+export type { WorldCwdFacts } from './world-cwd.ts'
 export { listWslDistributions, terminateWslDistribution, wslExecutable, WslBridge } from './wsl-bridge.ts'
 export type { WslHelperClient } from './wsl-bridge.ts'
 export { remoteWorkspaceDomainSpec, remoteWorkspaceRecord, remoteWorkspaceDomainState } from './spec.ts'
@@ -112,6 +124,12 @@ export interface ExecutionBinding {
   readonly target: WorkspaceTarget
   readonly cwd: string
   readonly pathMapper: PathMapper
+  /**
+   * Host directory of the bound session at resolution time. The routers use it
+   * to recognize the session's own directory and land it on {@link cwd}; any
+   * other host path keeps its drive mapping.
+   */
+  readonly sourceCwd?: string
   readonly bridge?: WslBridge
 }
 
@@ -174,13 +192,39 @@ export class RemoteWorkspaceRuntime extends Service {
     }, 'remote-workspace.bridges')
   }
 
-  /** Open the domain and rebuild the in-memory order. */
+  /** Open the domain, then announce the bound world to the model. */
   protected async [Service.init](): Promise<void> {
     const domain = await this.ctx.storageDomain.open(remoteWorkspaceDomainSpec)
     this.ctx.effect(() => () => domain.close(), 'remote-workspace.domainClose')
     this.table = domain.table('workspaces')
     this.global = domain.global
     this.state = domain.global.get()
+    this.ctx.inject(['systemPrompt'], (scope) => {
+      scope.systemPrompt.context({
+        name: EXECUTION_WORLD_CONTEXT,
+        order: scope.systemPrompt.getContextOrder('SANDBOX_POLICY') + 1,
+        text: promptContext => this.executionWorldContext(promptContext.agent?.session.id),
+      })
+    })
+  }
+
+  /**
+   * Model-facing description of the world this session's tools run in. Empty
+   * for an unbound session: the host world is DSH's default and needs no note.
+   * @param sessionId - Session the request belongs to.
+   * @returns the runtime-context text, or an empty string.
+   */
+  private executionWorldContext(sessionId: SessionId | undefined): string {
+    if (sessionId === undefined) return ''
+    const binding = this.bindingForSession(sessionId)
+    if (binding === undefined || binding.target.type !== 'wsl') return ''
+    const distro = binding.target.metadata?.distribution ?? binding.target.displayName
+    return [
+      `Execution world: WSL distribution "${distro}" (remote workspace "${binding.workspace.title}").`,
+      `Shell commands, file reads, file writes, and file searches for this session run inside that distribution, not on the ${hostWorldName()} host.`,
+      `The working directory is ${binding.cwd}; use POSIX paths, and use the bash tool because PowerShell does not exist in this world.`,
+      'Host files stay reachable through the Linux mount (`C:\\Users\\me` is `/mnt/c/Users/me`).',
+    ].join(' ')
   }
 
   /**
@@ -360,6 +404,7 @@ export class RemoteWorkspaceRuntime extends Service {
   bindingForSession(sessionId: SessionId): ExecutionBinding | undefined {
     const workspace = this.workspaceForSession(sessionId)
     if (workspace === undefined) return undefined
+    const sourceCwd = this.sessionDirectory(sessionId)
     const parsed = parseWorkspaceUri(workspace.uri)
     if (parsed.type === 'local') {
       return {
@@ -367,6 +412,7 @@ export class RemoteWorkspaceRuntime extends Service {
         target: localHostTarget(),
         cwd: workspace.cwd,
         pathMapper: localPathMapper(),
+        ...(sourceCwd === undefined ? {} : { sourceCwd }),
       }
     }
     if (parsed.type !== 'wsl') return undefined
@@ -377,7 +423,47 @@ export class RemoteWorkspaceRuntime extends Service {
       cwd: workspace.cwd,
       pathMapper: wslPathMapper(),
       bridge: this.bridgeFor(parsed.authority),
+      ...(sourceCwd === undefined ? {} : { sourceCwd }),
     }
+  }
+
+  /**
+   * Working directory DSH recorded for one session. The header is immutable, so
+   * this is the directory the session keeps for its whole life; the routers
+   * substitute the bound workspace for it.
+   * @param sessionId - Session id.
+   * @returns the recorded host directory, or `undefined` for an unknown session.
+   */
+  sessionDirectory(sessionId: SessionId): string | undefined {
+    return this.ctx.get('sessions')?.get(sessionId)?.header.cwd
+  }
+
+  /**
+   * Release one session's binding so its tools run on the host again.
+   * @param sessionId - Session to unbind.
+   * @returns true when a binding was removed.
+   */
+  unbindSession(sessionId: SessionId): Promise<boolean> {
+    return this.enqueue(async () => {
+      const state = this.requireState()
+      if (state.sessionBindings[sessionId] === undefined) return false
+      const sessionBindings = { ...state.sessionBindings }
+      Reflect.deleteProperty(sessionBindings, sessionId)
+      const table = this.requireTable()
+      const workspaceId = state.sessionBindings[sessionId]
+      if (workspaceId !== undefined) {
+        const record = table.get(workspaceId)
+        if (record !== undefined) {
+          await table.update(workspaceId, current => ({
+            ...current,
+            sessionIds: current.sessionIds.filter(id => id !== sessionId),
+            lastUsedAt: Date.now(),
+          }))
+        }
+      }
+      await this.setState({ workspaceIds: state.workspaceIds, sessionBindings })
+      return true
+    })
   }
 
   /**

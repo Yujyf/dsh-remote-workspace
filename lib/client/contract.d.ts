@@ -65,6 +65,11 @@ export interface RemoteWorkspaceInjected {
      */
     activateWorkspace: (workspaceId: RemoteWorkspaceId) => Promise<void>;
     /**
+     * Release the open session's binding so its tools run on the host again.
+     * @returns resolution after durability.
+     */
+    unbindSession: () => Promise<void>;
+    /**
      * Read the session a binding would apply to.
      * @returns the open session id, or undefined when none is open.
      */

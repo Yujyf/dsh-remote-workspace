@@ -15,7 +15,7 @@ import type {
 } from '@deepseek-ai/dsh-subprocess'
 import LocalSubprocessRuntime from '@deepseek-ai/dsh-subprocess-local'
 import { wslExecutable } from './wsl-bridge.ts'
-import { windowsPathToWslMount } from './path-mapper.ts'
+import { worldCwd } from './world-cwd.ts'
 import type { ExecutionBinding } from './index.ts'
 
 /**
@@ -107,23 +107,16 @@ export function wslExecArgv(
 }
 
 /**
- * Translate a spawn cwd into a POSIX path for `--cd`.
- * @param binding - WSL binding whose workspace cwd is the fallback.
+ * Translate a spawn cwd into a POSIX path for `--cd`. The session's own
+ * directory becomes the bound workspace, so a relative or defaulted command
+ * runs where the user pointed the workspace; every other host path keeps its
+ * `/mnt/<drive>` mapping.
+ * @param binding - WSL binding whose workspace cwd replaces the session directory.
  * @param cwd - Requested cwd.
  * @returns a POSIX path.
  */
 export function linuxCwd(binding: ExecutionBinding, cwd: string): string {
-  if (cwd.startsWith('/')) return cwd
-  const mapped = binding.pathMapper.toTargetPath(cwd) ?? windowsPathToWslMountSafe(cwd)
-  return mapped ?? binding.cwd
-}
-
-function windowsPathToWslMountSafe(cwd: string): string | undefined {
-  try {
-    return windowsPathToWslMount(cwd)
-  } catch {
-    return undefined
-  }
+  return worldCwd(binding, cwd)
 }
 
 export default RemoteWorkspaceSubprocessRuntime

@@ -26,6 +26,8 @@ export const REMOTE_WORKSPACE_VERBS = [
   'resolveUri',
   'createDirectory',
   'bindSession',
+  'unbindSession',
+  'listLocalWorkspaces',
 ] as const
 
 /** One callable verb name. */

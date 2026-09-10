@@ -7,6 +7,7 @@
 
 import { REMOTE_WORKSPACE_API_PREFIX, type RemoteWorkspaceApiEnvelope, type RemoteWorkspaceApiFailure, type RemoteWorkspaceVerb } from '../api-wire.ts'
 import type {
+  LocalWorkspaceListValue,
   RemoteWorkspaceBindRequest,
   RemoteWorkspaceCreateDirectoryRequest,
   RemoteWorkspaceCreateRequest,
@@ -18,6 +19,7 @@ import type {
   RemoteWorkspaceResolveUriRequest,
   RemoteWorkspaceResolveUriValue,
   RemoteWorkspaceTargetsValue,
+  RemoteWorkspaceUnbindRequest,
 } from '../wire-types.ts'
 import type { RemoteDirectoryListing, TargetHealth } from '../wire-types.ts'
 
@@ -92,6 +94,17 @@ export interface IRemoteWorkspaceApi {
    * @returns the empty success envelope.
    */
   bindSession(request: RemoteWorkspaceBindRequest): Promise<RemoteWorkspaceResult<null>>
+  /**
+   * Release one session's binding so its tools run on the host again.
+   * @param request - Session identity.
+   * @returns the empty success envelope.
+   */
+  unbindSession(request: RemoteWorkspaceUnbindRequest): Promise<RemoteWorkspaceResult<null>>
+  /**
+   * List DSH's own workspaces, shown beside the remote ones.
+   * @returns the built-in workspace rows.
+   */
+  listLocalWorkspaces(): Promise<RemoteWorkspaceResult<LocalWorkspaceListValue>>
 }
 
 /** `fetch` implementation of the remote-workspace API. */
@@ -141,6 +154,14 @@ export class RemoteWorkspaceApi implements IRemoteWorkspaceApi {
 
   bindSession(request: RemoteWorkspaceBindRequest): Promise<RemoteWorkspaceResult<null>> {
     return this.call('bindSession', request)
+  }
+
+  unbindSession(request: RemoteWorkspaceUnbindRequest): Promise<RemoteWorkspaceResult<null>> {
+    return this.call('unbindSession', request)
+  }
+
+  listLocalWorkspaces(): Promise<RemoteWorkspaceResult<LocalWorkspaceListValue>> {
+    return this.call('listLocalWorkspaces', {})
   }
 
   private async call<T>(verb: RemoteWorkspaceVerb, payload: unknown): Promise<RemoteWorkspaceResult<T>> {

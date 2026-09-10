@@ -45,6 +45,11 @@ export interface IRemoteWorkspaces {
      */
     bindSession(sessionId: SessionId, workspaceId: RemoteWorkspaceId): Promise<void>;
     /**
+     * Release one session's binding so its tools run on the host again.
+     * @param sessionId - session to unbind.
+     */
+    unbindSession(sessionId: SessionId): Promise<void>;
+    /**
      * List one directory level on a target.
      * @param targetId - target to browse.
      * @param path - directory path; omitted lists the target's default root.
@@ -91,6 +96,12 @@ export declare class RemoteWorkspacesController extends Service implements IRemo
     disconnectWorkspace(workspaceId: RemoteWorkspaceId): Promise<void>;
     removeWorkspace(workspaceId: RemoteWorkspaceId): Promise<void>;
     bindSession(sessionId: SessionId, workspaceId: RemoteWorkspaceId): Promise<void>;
+    /**
+     * Release one session's binding so its tools run on the host again.
+     * @param sessionId - session to unbind.
+     * @returns resolution after durability.
+     */
+    unbindSession(sessionId: SessionId): Promise<void>;
     listDirectory(targetId: WorkspaceTargetId, path?: string): Promise<RemoteDirectoryListing>;
     /**
      * Create one child directory on a target.

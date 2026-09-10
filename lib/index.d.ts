@@ -17,6 +17,8 @@ export { localPathMapper, windowsPathToWslMount, wslPathMapper, wslPathToUnc, ws
 export type { PathMapper } from './path-mapper.ts';
 export { LOCAL_CAPABILITIES, WSL_CAPABILITIES } from './capabilities.ts';
 export { decodeWslListOutput, parseWslList } from './wsl-list.ts';
+export { worldCwd, sameHostPath } from './world-cwd.ts';
+export type { WorldCwdFacts } from './world-cwd.ts';
 export { listWslDistributions, terminateWslDistribution, wslExecutable, WslBridge } from './wsl-bridge.ts';
 export type { WslHelperClient } from './wsl-bridge.ts';
 export { remoteWorkspaceDomainSpec, remoteWorkspaceRecord, remoteWorkspaceDomainState } from './spec.ts';
@@ -38,6 +40,12 @@ export interface ExecutionBinding {
     readonly target: WorkspaceTarget;
     readonly cwd: string;
     readonly pathMapper: PathMapper;
+    /**
+     * Host directory of the bound session at resolution time. The routers use it
+     * to recognize the session's own directory and land it on {@link cwd}; any
+     * other host path keeps its drive mapping.
+     */
+    readonly sourceCwd?: string;
     readonly bridge?: WslBridge;
 }
 declare module '@deepseek-ai/cordis' {
@@ -65,8 +73,15 @@ export declare class RemoteWorkspaceRuntime extends Service {
     private operationTail;
     /** @param ctx - Host context. */
     constructor(ctx: Context, config: Config);
-    /** Open the domain and rebuild the in-memory order. */
+    /** Open the domain, then announce the bound world to the model. */
     protected [Service.init](): Promise<void>;
+    /**
+     * Model-facing description of the world this session's tools run in. Empty
+     * for an unbound session: the host world is DSH's default and needs no note.
+     * @param sessionId - Session the request belongs to.
+     * @returns the runtime-context text, or an empty string.
+     */
+    private executionWorldContext;
     /**
      * Discover the remote execution worlds a session can be bound to. The
      * host-local world is never listed: a session that is not bound already runs
@@ -126,6 +141,20 @@ export declare class RemoteWorkspaceRuntime extends Service {
      * @returns the binding, or `undefined` when the session is not remote-bound.
      */
     bindingForSession(sessionId: SessionId): ExecutionBinding | undefined;
+    /**
+     * Working directory DSH recorded for one session. The header is immutable, so
+     * this is the directory the session keeps for its whole life; the routers
+     * substitute the bound workspace for it.
+     * @param sessionId - Session id.
+     * @returns the recorded host directory, or `undefined` for an unknown session.
+     */
+    sessionDirectory(sessionId: SessionId): string | undefined;
+    /**
+     * Release one session's binding so its tools run on the host again.
+     * @param sessionId - Session to unbind.
+     * @returns true when a binding was removed.
+     */
+    unbindSession(sessionId: SessionId): Promise<boolean>;
     /**
      * Connect a workspace: start a stopped WSL distro when configured, and
      * create the helper.

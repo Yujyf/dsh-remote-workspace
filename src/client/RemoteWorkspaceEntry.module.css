@@ -1,4 +1,9 @@
-/* Remote-workspace selector: sidebar entry + panel. Tokens only (docs/web-styling.md). */
+/* Remote-workspace selector: sidebar entry + panel.
+ *
+ * Tokens are the ones the DSH 0.1.2 web theme defines (`--dsw-alias-label-*`,
+ * `--dsw-alias-border-l*`, `--dsw-alias-interactive-bg-*`, `--dsw-alias-state-*`);
+ * an undefined custom property silently drops its declaration, so a token from a
+ * newer theme line would leave these rules unstyled rather than fail loudly. */
 
 .entry {
   display: flex;
@@ -35,12 +40,12 @@
 
 .session {
   flex: 1;
-  color: var(--dsw-alias-text-secondary);
+  color: var(--dsw-alias-label-secondary);
   font-size: 13px;
 }
 
 .busy {
-  color: var(--dsw-alias-text-secondary);
+  color: var(--dsw-alias-label-secondary);
   font-size: 12px;
 }
 
@@ -48,15 +53,43 @@
   margin: 0;
   padding: 8px 10px;
   border-radius: 6px;
-  background: var(--dsw-alias-fill-danger-subtle);
-  color: var(--dsw-alias-text-danger);
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-state-error-primary);
   font-size: 13px;
 }
 
 .hint {
   margin: 4px 0;
-  color: var(--dsw-alias-text-secondary);
+  color: var(--dsw-alias-label-secondary);
   font-size: 13px;
+}
+
+.filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.chip {
+  padding: 3px 10px;
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.chip:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.chipActive {
+  background: var(--dsw-alias-interactive-bg-active);
+  border-color: var(--dsw-alias-border-l3);
+  color: var(--dsw-alias-label-primary);
 }
 
 .list {
@@ -73,7 +106,8 @@
   flex-direction: column;
 }
 
-.targetRow {
+.targetRow,
+.worldHead {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -85,15 +119,18 @@
   color: inherit;
   font: inherit;
   text-align: left;
+}
+
+.targetRow {
   cursor: pointer;
 }
 
 .targetRow:hover {
-  background: var(--dsw-alias-fill-hover);
+  background: var(--dsw-alias-interactive-bg-hover);
 }
 
 .chevron {
-  color: var(--dsw-alias-icon-secondary);
+  color: var(--dsw-alias-label-tertiary);
   transition: transform 120ms ease;
 }
 
@@ -102,7 +139,7 @@
 }
 
 .targetIcon {
-  color: var(--dsw-alias-icon-secondary);
+  color: var(--dsw-alias-label-tertiary);
 }
 
 .targetName {
@@ -111,7 +148,7 @@
 }
 
 .statusText {
-  color: var(--dsw-alias-text-secondary);
+  color: var(--dsw-alias-label-secondary);
   font-size: 12px;
 }
 
@@ -129,7 +166,7 @@
 }
 
 .folderIcon {
-  color: var(--dsw-alias-icon-secondary);
+  color: var(--dsw-alias-label-tertiary);
   flex: none;
 }
 
@@ -145,7 +182,7 @@
 }
 
 .workspacePath {
-  color: var(--dsw-alias-text-secondary);
+  color: var(--dsw-alias-label-secondary);
   font-size: 12px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -153,7 +190,7 @@
 }
 
 .bound {
-  color: var(--dsw-alias-text-success);
+  color: var(--dsw-alias-state-success-primary);
   font-size: 12px;
   flex: none;
 }
@@ -172,9 +209,9 @@
 
 .crumb {
   flex: 1;
-  font-family: var(--dsw-font-mono);
+  font-family: var(--dsw-font-markdown-code-font-family);
   font-size: 12px;
-  color: var(--dsw-alias-text-secondary);
+  color: var(--dsw-alias-label-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -196,7 +233,7 @@
 }
 
 .dirRow:hover {
-  background: var(--dsw-alias-fill-hover);
+  background: var(--dsw-alias-interactive-bg-hover);
 }
 
 .browseFoot {
@@ -204,7 +241,7 @@
   align-items: center;
   gap: 8px;
   padding-top: 4px;
-  border-top: 0.5px solid var(--dsw-alias-border-subtle);
+  border-top: 0.5px solid var(--dsw-alias-border-l2);
 }
 
 .folderForm {
@@ -218,9 +255,9 @@
   flex: 1;
   min-width: 0;
   padding: 5px 8px;
-  border: 0.5px solid var(--dsw-alias-border-subtle);
+  border: 0.5px solid var(--dsw-alias-border-l2);
   border-radius: 6px;
-  background: var(--dsw-alias-fill-input);
+  background: var(--dsw-alias-bg-layer-2);
   color: inherit;
   font: inherit;
 }

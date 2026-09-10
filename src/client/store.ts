@@ -22,6 +22,8 @@ type RemoteWorkspaceViewState = {
   browsePath: string
   /** Target ids whose workspace rows are expanded. */
   expandedTargets: Record<string, boolean>
+  /** Execution world the workspace list is filtered to; null shows every world. */
+  worldFilter: string | null
 }
 
 /** Annotation twin of the actions literal below. */
@@ -32,6 +34,7 @@ type RemoteWorkspaceActions = {
   setBrowsePath: (draft: RemoteWorkspaceViewState, path: string) => void
   backToTargets: (draft: RemoteWorkspaceViewState) => void
   setTargetExpanded: (draft: RemoteWorkspaceViewState, targetId: string, expanded: boolean) => void
+  setWorldFilter: (draft: RemoteWorkspaceViewState, world: string | null) => void
 }
 
 /**
@@ -46,6 +49,7 @@ export function createRemoteWorkspaceStore(): EngineStoreHandle<RemoteWorkspaceV
       browseTargetId: null,
       browsePath: '',
       expandedTargets: {},
+      worldFilter: null,
     }),
     // Panel visibility is per-browser-session, not durable: a reload starts
     // with the panel closed. The store stays in-memory on purpose.
@@ -71,6 +75,7 @@ export function createRemoteWorkspaceStore(): EngineStoreHandle<RemoteWorkspaceV
       setTargetExpanded: (d, targetId: string, expanded: boolean) => {
         d.expandedTargets[targetId] = expanded
       },
+      setWorldFilter: (d, world: string | null) => { d.worldFilter = world },
     },
   })
 }

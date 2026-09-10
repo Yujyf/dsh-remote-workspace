@@ -9,19 +9,23 @@
 import type { SessionId } from '@deepseek-ai/dsh-session/types';
 import type { RemoteWorkspaceApiFailure } from '../api-wire.ts';
 import type { IRemoteWorkspaceApi } from './api.ts';
-import type { RemoteDirectoryListing, RemoteWorkspace, RemoteWorkspaceId, TargetHealth, WorkspaceTarget, WorkspaceTargetId } from '../wire-types.ts';
+import type { LocalWorkspaceRow, RemoteDirectoryListing, RemoteWorkspace, RemoteWorkspaceId, TargetHealth, WorkspaceTarget, WorkspaceTargetId } from '../wire-types.ts';
 /** Lifecycle of the cached catalog. */
 export type RemoteWorkspacePhase = 'idle' | 'loading' | 'ready' | 'error';
 /** Identity-stable Client view of the remote-workspace catalog. */
 export interface RemoteWorkspaceSnapshot {
     readonly phase: RemoteWorkspacePhase;
-    /** Discovered targets, Local first then one entry per WSL distribution. */
+    /** Discovered remote worlds, one entry per WSL distribution. */
     readonly targets: readonly WorkspaceTarget[];
-    /** Durable workspace registrations in registry order. */
+    /** Durable remote workspace registrations in registry order. */
     readonly workspaces: readonly RemoteWorkspace[];
+    /** DSH's own workspaces, shown for context and never mutated here. */
+    readonly localWorkspaces: readonly LocalWorkspaceRow[];
     /** Host failure text from the last load, or null. */
     readonly error: string | null;
 }
+/** Filter key of DSH's own workspaces in the selector. */
+export declare const LOCAL_WORLD_KEY = "local";
 /** Bare observable source over {@link RemoteWorkspaceSnapshot}. */
 export interface RemoteWorkspaceSource {
     /**
@@ -108,6 +112,12 @@ export declare class ClientRemoteWorkspaceModel implements RemoteWorkspaceSource
      * @returns resolution after durability.
      */
     bindSession(sessionId: SessionId, workspaceId: RemoteWorkspaceId): Promise<void>;
+    /**
+     * Release one session's binding so its tools run on the host again.
+     * @param sessionId - session to unbind.
+     * @returns resolution after durability.
+     */
+    unbindSession(sessionId: SessionId): Promise<void>;
     /**
      * List one directory level on a target.
      * @param targetId - target to browse.

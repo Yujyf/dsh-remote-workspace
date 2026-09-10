@@ -103,6 +103,17 @@ test('a void verb tolerates an omitted value key instead of reporting a transpor
   })
 })
 
+test('release and host-workspace verbs reach their routes', async () => {
+  const api = new RemoteWorkspaceApi()
+  await withFetch(async () => jsonResponse(200, { ok: true, value: { workspaces: [] } }), async calls => {
+    await api.unbindSession({ sessionId: 's-1' })
+    assert.equal(calls[0].url, '/remote-workspace/api/unbindSession')
+    assert.deepEqual(JSON.parse(calls[0].init.body), { sessionId: 's-1' })
+    await api.listLocalWorkspaces()
+    assert.equal(calls[1].url, '/remote-workspace/api/listLocalWorkspaces')
+  })
+})
+
 test('an unrecognized envelope reports the HTTP status instead of throwing', async () => {
   const api = new RemoteWorkspaceApi()
   await withFetch(async () => jsonResponse(200, { value: 'unexpected' }), async () => {

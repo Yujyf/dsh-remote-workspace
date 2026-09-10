@@ -19,6 +19,8 @@ type RemoteWorkspaceViewState = {
     browsePath: string;
     /** Target ids whose workspace rows are expanded. */
     expandedTargets: Record<string, boolean>;
+    /** Execution world the workspace list is filtered to; null shows every world. */
+    worldFilter: string | null;
 };
 /** Annotation twin of the actions literal below. */
 type RemoteWorkspaceActions = {
@@ -28,6 +30,7 @@ type RemoteWorkspaceActions = {
     setBrowsePath: (draft: RemoteWorkspaceViewState, path: string) => void;
     backToTargets: (draft: RemoteWorkspaceViewState) => void;
     setTargetExpanded: (draft: RemoteWorkspaceViewState, targetId: string, expanded: boolean) => void;
+    setWorldFilter: (draft: RemoteWorkspaceViewState, world: string | null) => void;
 };
 /**
  * Create the selector's interaction store handle.

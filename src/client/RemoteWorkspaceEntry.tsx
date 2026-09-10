@@ -1,11 +1,12 @@
 /**
  * The remote-workspace selector: the sidebar foot's entry plus the panel it
- * opens. The panel lists every discovered execution target with its reachable
- * status and its registered workspaces, and offers two ways to adopt one —
- * "Use in this session" on an existing row, or a folder browser that registers
- * a new workspace from a chosen directory. Binding a workspace to the open
- * session is what routes that session's official tools into the target; with
- * no open session the panel says so instead of silently doing nothing.
+ * opens. The panel lists DSH's own workspaces beside every discovered remote
+ * world, filters them by execution world, and offers two ways to adopt a remote
+ * one — "Use in this session" on an existing row, or a folder browser that
+ * registers a new workspace from a chosen directory. Binding a workspace to the
+ * open session is what routes that session's official tools into the target;
+ * "Run on the host again" releases the binding. With no open session the panel
+ * says so instead of silently doing nothing.
  *
  * All data arrives through the injected face and the catalog hook; this file
  * holds only view state (which view, the level on screen, in-flight verbs).
@@ -19,6 +20,7 @@ import {
 import type { StateDotState } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { WorkspaceTargetId } from '../wire-types.ts'
 import type { RemoteWorkspaceEntryProps } from './contract.ts'
+import { LOCAL_WORLD_KEY } from './model.ts'
 import css from './RemoteWorkspaceEntry.module.css'
 
 /** How a target's reachability maps onto the shared status dot. */
@@ -114,86 +116,151 @@ export function RemoteWorkspaceEntry(props: RemoteWorkspaceEntryProps): React.Re
   const targetName = (targetId: string): string =>
     catalog.targets.find(target => target.id === targetId)?.displayName ?? targetId
 
+  /** Header text for a bound session: the world it runs in, then its directory. */
+  const boundSummary = (): string => {
+    const workspace = catalog.workspaces.find(candidate => candidate.id === boundWorkspaceId)
+    if (workspace === undefined) return t('panel.bound')
+    return `${t('panel.bound')} · ${targetName(workspace.targetId)} · ${workspace.cwd}`
+  }
+
+  const worlds = [
+    { key: LOCAL_WORLD_KEY, label: t('panel.world.local') },
+    ...catalog.targets.map(target => ({ key: target.id, label: target.displayName })),
+  ]
+  const showsWorld = (key: string): boolean => view.worldFilter === null || view.worldFilter === key
+
+  const renderLocalWorld = (): React.ReactElement => (
+    <li key={LOCAL_WORLD_KEY} className={css.target}>
+      <div className={css.worldHead}>
+        <IconFolderOpen16 className={css.folderIcon} />
+        <span className={css.targetName}>{t('panel.world.local')}</span>
+      </div>
+      <div className={css.rows}>
+        {catalog.localWorkspaces.length === 0
+          ? <p className={css.hint}>{t('panel.local.empty')}</p>
+          : (
+            <ul className={css.list}>
+              {catalog.localWorkspaces.map(workspace => (
+                <li key={workspace.id} className={css.workspaceRow}>
+                  <IconFolderOpen16 className={css.folderIcon} />
+                  <span className={css.workspaceText}>
+                    <span className={css.workspaceTitle}>{workspace.title}</span>
+                    <span className={css.workspacePath}>{workspace.path}</span>
+                  </span>
+                  {sessionId !== undefined && workspace.sessionIds.includes(sessionId) && (
+                    <span className={css.bound}>{t('panel.bound')}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        <p className={css.hint}>{t('panel.local.hint')}</p>
+      </div>
+    </li>
+  )
+
   const renderTargets = (): React.ReactElement => {
     if (catalog.phase === 'loading' && catalog.targets.length === 0) {
       return <p className={css.hint}>{t('panel.loading')}</p>
     }
-    if (catalog.targets.length === 0) {
+    if (catalog.targets.length === 0 && catalog.localWorkspaces.length === 0) {
       return <p className={css.hint}>{t('panel.targets.empty')}</p>
     }
     return (
-      <ul className={css.list}>
-        {catalog.targets.map((target) => {
-          const rows = catalog.workspaces.filter(workspace => workspace.targetId === target.id)
-          const expanded = view.expandedTargets[target.id] === true
-          return (
-            <li key={target.id} className={css.target}>
-              <button
-                type="button"
-                className={css.targetRow}
-                aria-expanded={expanded}
-                onClick={() => { actions.setTargetExpanded(target.id, !expanded) }}
-              >
-                <IconChevronRightOutline14 className={clsx(css.chevron, expanded && css.chevronOpen)} />
-                <IconGlobeOutline14 className={css.targetIcon} />
-                <span className={css.targetName}>{target.displayName}</span>
-                <StateDot state={statusDot(target.status)} />
-                <span className={css.statusText}>{t(statusKey(target.status))}</span>
-              </button>
-              {expanded && (
-                <div className={css.rows}>
-                  {rows.length === 0
-                    ? <p className={css.hint}>{t('panel.target.workspaces.empty')}</p>
-                    : (
-                      <ul className={css.list}>
-                        {rows.map(workspace => (
-                          <li key={workspace.id} className={css.workspaceRow}>
-                            <IconFolderOpen16 className={css.folderIcon} />
-                            <span className={css.workspaceText}>
-                              <span className={css.workspaceTitle}>{workspace.title}</span>
-                              <span className={css.workspacePath}>{workspace.cwd}</span>
-                            </span>
-                            {workspace.id === boundWorkspaceId && (
-                              <span className={css.bound}>{t('panel.bound')}</span>
-                            )}
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              disabled={busy || sessionId === undefined}
-                              onClick={() => {
-                                void run(async () => { await props.activateWorkspace(workspace.id) })
-                              }}
-                            >
-                              {t('panel.workspace.use')}
-                            </Button>
-                            <Button
-                              size="sm"
-                              disabled={busy}
-                              aria-label={t('panel.workspace.remove')}
-                              onClick={() => {
-                                void run(async () => { await props.removeWorkspace(workspace.id) })
-                              }}
-                            >
-                              <IconCloseOutline16 />
-                            </Button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  <Button
-                    size="sm"
-                    icon={<IconPlusOutline16 />}
-                    disabled={busy}
-                    onClick={() => { browse(target.id, '') }}
-                  >
-                    {t('panel.target.browse')}
-                  </Button>
-                </div>
-              )}
-            </li>
-          )
-        })}
-      </ul>
+      <>
+        <div className={css.filter} role="group" aria-label={t('panel.world.filter')}>
+          <button
+            type="button"
+            className={clsx(css.chip, view.worldFilter === null && css.chipActive)}
+            onClick={() => { actions.setWorldFilter(null) }}
+          >
+            {t('panel.world.all')}
+          </button>
+          {worlds.map(world => (
+            <button
+              key={world.key}
+              type="button"
+              className={clsx(css.chip, view.worldFilter === world.key && css.chipActive)}
+              onClick={() => { actions.setWorldFilter(world.key) }}
+            >
+              {world.label}
+            </button>
+          ))}
+        </div>
+        <ul className={css.list}>
+          {showsWorld(LOCAL_WORLD_KEY) && renderLocalWorld()}
+          {catalog.targets.filter(target => showsWorld(target.id)).map((target) => {
+            const rows = catalog.workspaces.filter(workspace => workspace.targetId === target.id)
+            const expanded = view.expandedTargets[target.id] === true
+            return (
+              <li key={target.id} className={css.target}>
+                <button
+                  type="button"
+                  className={css.targetRow}
+                  aria-expanded={expanded}
+                  onClick={() => { actions.setTargetExpanded(target.id, !expanded) }}
+                >
+                  <IconChevronRightOutline14 className={clsx(css.chevron, expanded && css.chevronOpen)} />
+                  <IconGlobeOutline14 className={css.targetIcon} />
+                  <span className={css.targetName}>{target.displayName}</span>
+                  <StateDot state={statusDot(target.status)} />
+                  <span className={css.statusText}>{t(statusKey(target.status))}</span>
+                </button>
+                {expanded && (
+                  <div className={css.rows}>
+                    {rows.length === 0
+                      ? <p className={css.hint}>{t('panel.target.workspaces.empty')}</p>
+                      : (
+                        <ul className={css.list}>
+                          {rows.map(workspace => (
+                            <li key={workspace.id} className={css.workspaceRow}>
+                              <IconFolderOpen16 className={css.folderIcon} />
+                              <span className={css.workspaceText}>
+                                <span className={css.workspaceTitle}>{workspace.title}</span>
+                                <span className={css.workspacePath}>{workspace.cwd}</span>
+                              </span>
+                              {workspace.id === boundWorkspaceId && (
+                                <span className={css.bound}>{t('panel.bound')}</span>
+                              )}
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={busy || sessionId === undefined}
+                                onClick={() => {
+                                  void run(async () => { await props.activateWorkspace(workspace.id) })
+                                }}
+                              >
+                                {t('panel.workspace.use')}
+                              </Button>
+                              <Button
+                                size="sm"
+                                disabled={busy}
+                                aria-label={t('panel.workspace.remove')}
+                                onClick={() => {
+                                  void run(async () => { await props.removeWorkspace(workspace.id) })
+                                }}
+                              >
+                                <IconCloseOutline16 />
+                              </Button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    <Button
+                      size="sm"
+                      icon={<IconPlusOutline16 />}
+                      disabled={busy}
+                      onClick={() => { browse(target.id, '') }}
+                    >
+                      {t('panel.target.browse')}
+                    </Button>
+                  </div>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      </>
     )
   }
 
@@ -334,8 +401,20 @@ export function RemoteWorkspaceEntry(props: RemoteWorkspaceEntryProps): React.Re
             <span className={css.session}>
               {sessionId === undefined
                 ? t('panel.noSession')
-                : boundWorkspaceId === undefined ? t('panel.unbound') : t('panel.bound')}
+                : boundWorkspaceId === undefined
+                  ? t('panel.unbound')
+                  : boundSummary()}
             </span>
+            {boundWorkspaceId !== undefined && sessionId !== undefined && (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={busy}
+                onClick={() => { void run(() => props.unbindSession()) }}
+              >
+                {t('panel.backToLocal')}
+              </Button>
+            )}
             <Button
               size="sm"
               icon={<IconRefreshOutline14 />}

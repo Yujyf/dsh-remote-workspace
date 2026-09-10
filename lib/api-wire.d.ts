@@ -12,7 +12,7 @@
 /** Route prefix the Host registers and the browser posts under. */
 export declare const REMOTE_WORKSPACE_API_PREFIX = "/remote-workspace/api";
 /** Verbs the browser may call; each one is a `POST` to `<prefix>/<verb>`. */
-export declare const REMOTE_WORKSPACE_VERBS: readonly ["listTargets", "listWorkspaces", "createWorkspace", "removeWorkspace", "connectWorkspace", "disconnectWorkspace", "healthCheck", "listDirectory", "resolveUri", "createDirectory", "bindSession"];
+export declare const REMOTE_WORKSPACE_VERBS: readonly ["listTargets", "listWorkspaces", "createWorkspace", "removeWorkspace", "connectWorkspace", "disconnectWorkspace", "healthCheck", "listDirectory", "resolveUri", "createDirectory", "bindSession", "unbindSession", "listLocalWorkspaces"];
 /** One callable verb name. */
 export type RemoteWorkspaceVerb = typeof REMOTE_WORKSPACE_VERBS[number];
 /** Failure carried in a non-ok envelope. */

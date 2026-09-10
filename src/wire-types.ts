@@ -43,6 +43,28 @@ export interface RemoteWorkspaceBindRequest {
   readonly sessionId: SessionId
 }
 
+/** Release one session's binding. */
+export interface RemoteWorkspaceUnbindRequest {
+  readonly sessionId: SessionId
+}
+
+/**
+ * One workspace of DSH's own registry, shown by the selector for context.
+ * `remote-workspace` never writes these: the built-in workspace surface owns
+ * them, and switching a session to one is that surface's action.
+ */
+export interface LocalWorkspaceRow {
+  readonly id: string
+  readonly title: string
+  readonly path: string
+  readonly sessionIds: readonly SessionId[]
+}
+
+/** Result of listing DSH's own workspaces. */
+export interface LocalWorkspaceListValue {
+  readonly workspaces: readonly LocalWorkspaceRow[]
+}
+
 /** Directory listing request. */
 export interface RemoteWorkspaceListDirectoryRequest {
   readonly targetId: WorkspaceTargetId

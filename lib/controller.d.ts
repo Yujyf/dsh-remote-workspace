@@ -5,7 +5,7 @@
  */
 import { Context, Service } from '@deepseek-ai/cordis';
 import type { RemoteDirectoryListing, TargetHealth } from './wire-types.ts';
-import type { RemoteWorkspaceBindRequest, RemoteWorkspaceCreateDirectoryRequest, RemoteWorkspaceCreateRequest, RemoteWorkspaceCreateValue, RemoteWorkspaceHealthRequest, RemoteWorkspaceIdRequest, RemoteWorkspaceListDirectoryRequest, RemoteWorkspaceListValue, RemoteWorkspaceResolveUriRequest, RemoteWorkspaceResolveUriValue, RemoteWorkspaceTargetsValue } from './wire-types.ts';
+import type { LocalWorkspaceListValue, RemoteWorkspaceBindRequest, RemoteWorkspaceCreateDirectoryRequest, RemoteWorkspaceCreateRequest, RemoteWorkspaceCreateValue, RemoteWorkspaceHealthRequest, RemoteWorkspaceIdRequest, RemoteWorkspaceListDirectoryRequest, RemoteWorkspaceListValue, RemoteWorkspaceResolveUriRequest, RemoteWorkspaceResolveUriValue, RemoteWorkspaceTargetsValue, RemoteWorkspaceUnbindRequest } from './wire-types.ts';
 export type * from './wire-types.ts';
 declare module '@deepseek-ai/cordis' {
     interface Context {
@@ -90,6 +90,18 @@ export declare class RemoteWorkspaceController extends Service {
      * @returns resolution after durability.
      */
     bindSession(request: RemoteWorkspaceBindRequest): Promise<void>;
+    /**
+     * Release one session's binding so its tools run on the host again.
+     * @param request - Session identity.
+     * @returns resolution after durability.
+     */
+    unbindSession(request: RemoteWorkspaceUnbindRequest): Promise<void>;
+    /**
+     * List DSH's own workspaces, which the selector shows beside the remote ones.
+     * Empty when the deployment mounts no workspace registry.
+     * @returns the built-in workspace rows.
+     */
+    listLocalWorkspaces(): LocalWorkspaceListValue;
     /** Verb table: one entry per browser-callable method. */
     private verbs;
     private handle;

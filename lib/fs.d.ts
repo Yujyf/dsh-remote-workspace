@@ -59,6 +59,14 @@ export declare class RemoteWorkspaceFileSystem extends FileSystem {
     editText(target: FsTarget, edit: FsEditRequest, expected?: {
         version: FsVersion;
     }, signal?: AbortSignal, sandboxPolicy?: SandboxExecutionPolicy): Promise<FsEditOutcome>;
+    /**
+     * Translate a request cwd into the bound world's native spelling, so a
+     * relative path resolves inside the workspace the user picked instead of the
+     * host directory the session was created in.
+     */
+    private worldCwdOf;
+    /** The WSL binding whose backend should serve this call, when there is one. */
+    private wslBinding;
     private backend;
 }
 export default RemoteWorkspaceFileSystem;
